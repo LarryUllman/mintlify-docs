@@ -1,0 +1,110 @@
+---
+title: "Write Policies"
+description: "Define granular policies that control which users can sign which smart contract transactions, and under what conditions."
+sidebarTitle: "Write Policies"
+---
+
+Policies are the core of Turnkey's smart contract security model. They define exactly who can sign what, for which contracts, and under what conditions. Without an explicit allow policy, no transaction can be signed.
+
+## Policy basics
+
+A policy consists of:
+
+- **Effect** — `EFFECT_ALLOW` or `EFFECT_DENY`
+- **Condition** — An expression evaluated against the transaction and user context
+- **Consensus** — (Optional) Require multiple approvers before the action proceeds
+
+For full details on the policy language, see the [policy language reference](/concepts/policies/language).
+
+## Upload smart contract interfaces
+
+Before writing policies that reference contract function names or arguments, upload the contract's ABI (Ethereum) or IDL (Solana). This enables Turnkey's policy engine to parse transaction call data.
+
+```ts
+const client = turnkey.apiClient();
+
+const abi = [/* your contract ABI */];
+
+await client.createSmartContractInterface({
+  label: "MyToken mainnet",
+  notes: "ERC-20 token contract",
+  type: "SMART_CONTRACT_INTERFACE_TYPE_ETHEREUM",
+  smartContractAddress: "0x1234...abcd",
+  smartContractInterface: JSON.stringify(abi),
+});
+```
+
+See [Smart contract interfaces](/concepts/policies/smart-contract-interfaces) for detailed ABI and IDL formatting guidance.
+
+## Example policies
+
+### Allow a deployer to sign deployment transactions
+
+```ts
+await client.createPolicy({
+  policyName: "Allow deployer to deploy",
+  effect: "EFFECT_ALLOW",
+  condition:
+    "activity.resource == 'WALLET' && " +
+    "activity.action == 'SIGN_TRANSACTION' && " +
+    "wallet.id == '<deployer-wallet-id>' && " +
+    "activity.initiator.tags.contains('deployer')",
+  notes: "Scoped to the deployer wallet and deployer-tagged users",
+});
+```
+
+### Allow minting with amount limits
+
+With the contract ABI uploaded, you can reference call arguments directly:
+
+```ts
+await client.createPolicy({
+  policyName: "Allow mint up to 1M tokens",
+  effect: "EFFECT_ALLOW",
+  condition:
+    "eth.tx.to == '0x1234...abcd' && " +
+    "eth.tx.function_name == 'mint' && " +
+    "eth.tx.contract_call_args['amount'] <= 1000000000000000000000000 && " +
+    "activity.initiator.tags.contains('operator')",
+  notes: "Operator can mint up to 1M tokens per transaction",
+});
+```
+
+### Require multi-party approval for upgrades
+
+```ts
+await client.createPolicy({
+  policyName: "Require 2-of-3 for upgrades",
+  effect: "EFFECT_ALLOW",
+  consensus:
+    "approvers.filter(u, u.tags.contains('upgrade-owner')).count() >= 2",
+  condition:
+    "eth.tx.to == '0x1234...abcd' && " +
+    "eth.tx.function_name == 'upgradeTo'",
+  notes: "Contract upgrades require 2 of 3 upgrade owners to approve",
+});
+```
+
+### Deny all other interactions with a contract
+
+```ts
+await client.createPolicy({
+  policyName: "Deny unrecognized contract calls",
+  effect: "EFFECT_DENY",
+  condition: "eth.tx.to == '0x1234...abcd'",
+  notes: "Catch-all deny for any contract interaction not covered above",
+});
+```
+
+## Policy design best practices
+
+- **Default deny** — Only allow what is explicitly needed. Turnkey implicitly denies actions without a matching allow policy.
+- **Scope narrowly** — Target policies to specific wallets, users, contract addresses, and function names.
+- **Use temporary policies for sensitive operations** — Create a policy for an upgrade, execute it, then delete the policy to close the window.
+- **Layer your policies** — Combine user tag checks, wallet checks, and transaction-level conditions for defense in depth.
+
+## Next step
+
+<Card title="Sign transactions" icon="pen" href="/smart-contracts/sign-transactions">
+  Deploy and interact with your contracts using your policies.
+</Card>

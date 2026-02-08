@@ -4,13 +4,21 @@ description: "Turnkey's transaction automation enables you to build secure, prog
 sidebarTitle: "Transaction automation"
 ---
 
-## Prerequisites
+<Callout icon="notes" color="#D3D3D3">Goal: Get the user to see some Turnkey magic--and introduce some basic concepts--in under 30 minutes. Then move them further into the docs. TODO Make descriptions way shorter and less marketing-y.</Callout>
 
-This guide assumes you've completed the steps to create an account, organization, and API keypair as described in the [account setup](/getting-started/quickstart) section.
+## Create an account and get your organization ID
 
-## Installation
+Navigate to the [Turnkey Dashboard](https://app.turnkey.com/dashboard/auth/initial) to create an account and set up your organization
 
-Install the Turnkey CLI to get started:
+Once logged in, open the user dropdown at the top right. Your Organization ID is listed there. Copy it for use in your code or environment variables.
+
+<Frame>
+  <img src="/images/getting-started/img/quickstart/org-id.png" />
+</Frame>
+
+## Install the CLI
+
+Install the Turnkey CLI:
 
 ```bash
 brew install tkhq/tap/turnkey
@@ -119,5 +127,4 @@ via [Etherscan](https://etherscan.io/pushTx).
 
 ## Next steps
 
-Learn more about integrating transaction automation and our powerful
-features [here](/signing-automation/overview).
+Check out the [Automate transactions overview](/signing-automation/automate-transactions-overview) to learn more about integrating transaction automation and our powerful features.

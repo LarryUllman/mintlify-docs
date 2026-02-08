@@ -1,0 +1,78 @@
+---
+title: "Issue Authenticators"
+description: "Provision API keys and passkeys so users and automated systems can authenticate to Turnkey for contract operations."
+sidebarTitle: "Issue Authenticators"
+---
+
+Users need credentials to interact with Turnkey. Machine users authenticate with **API keys**, while human operators use **passkeys** (WebAuthn credentials). Each credential type is suited to different parts of your smart contract workflow.
+
+## Credential types
+
+| Credential | Best for | How it works |
+| --- | --- | --- |
+| **API key** | Automated systems, CI/CD, backend services | An asymmetric key pair where the public key is registered with Turnkey and the private key signs requests |
+| **Passkey** | Human operators approving sensitive actions | A WebAuthn credential bound to a device, requiring biometric or PIN verification |
+
+## Create API keys for machine users
+
+Generate a key pair and register the public key with Turnkey:
+
+```ts
+const client = turnkey.apiClient();
+
+// Generate a new API key pair for the deployer user
+const apiKeys = await client.createApiKeys({
+  userId: "<deployer-user-id>",
+  apiKeys: [
+    {
+      apiKeyName: "deployer-ci-key",
+      publicKey: "<public-key-hex>",
+      curveType: "API_KEY_CURVE_P256",
+    },
+  ],
+});
+
+console.log("API key ID:", apiKeys.apiKeyIds[0]);
+```
+
+<Note>
+Generate the key pair locally using the Turnkey CLI or SDK. The private key never leaves your environment — only the public key is sent to Turnkey.
+</Note>
+
+You can also generate API keys using the CLI:
+
+```bash
+turnkey generate api-key --key-name "deployer-ci-key"
+```
+
+This outputs both the public and private key. Store the private key securely (e.g., in a secrets manager).
+
+## Register passkeys for human operators
+
+Human operators register passkeys through the Turnkey Dashboard or via the SDK in a browser context:
+
+```ts
+import { useTurnkey } from "@turnkey/sdk-react";
+
+const { turnkey } = useTurnkey();
+
+// Prompts the user's browser for WebAuthn registration
+const authenticator = await turnkey.createPasskey({
+  authenticatorName: "upgrade-owner-yubikey",
+});
+```
+
+For sensitive roles like upgrade owners, consider requiring hardware security keys (e.g., YubiKey) rather than platform authenticators.
+
+## Credential management best practices
+
+- **Rotate API keys regularly** — Create a new key, update your systems, then delete the old one
+- **Use separate keys per environment** — Different API keys for staging and production
+- **Limit credentials per role** — Each machine user should have the minimum number of API keys needed
+- **Require hardware keys for high-sensitivity roles** — Upgrade owners and admin users should use hardware-backed passkeys
+
+## Next step
+
+<Card title="Write policies" icon="shield" href="/smart-contracts/write-policies">
+  Define the rules that govern contract interactions.
+</Card>

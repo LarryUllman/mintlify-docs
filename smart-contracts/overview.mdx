@@ -1,0 +1,45 @@
+---
+title: "Manage Smart Contracts"
+description: "Use Turnkey to securely manage the full lifecycle of your smart contracts — from deployment to upgrades — with cryptographically enforced access control."
+sidebarTitle: "Overview"
+---
+
+Turnkey provides a secure, predictable framework for managing smart contracts across their entire lifecycle. By combining key management within [secure enclaves](/security/secure-enclaves) with a flexible [policy engine](/concepts/policies/overview), every contract interaction — deployment, function calls, upgrades — is explicitly permissioned and auditable.
+
+## Why Turnkey for smart contracts?
+
+- **Zero key exposure** — Private keys are generated and stored within Turnkey's secure enclaves. They are never exposed to users or automated systems.
+- **Role-based access control** — Every action is governed by policies. If a user or system is not explicitly permitted to perform an action, it cannot.
+- **Granular policy enforcement** — Policies can target specific chains, contract addresses, function selectors, and even call argument values.
+- **Automation-ready** — Combine programmatic signing with policy guardrails to safely automate routine contract operations like minting, transfers, and pausing.
+
+## The smart contract lifecycle on Turnkey
+
+<Steps>
+<Step title="Define users">
+Create human operators and machine users within your Turnkey organization, each with specific roles and tags.
+</Step>
+<Step title="Set up signing keys">
+Create wallets that will own and interact with your contracts — deployer wallets, operator wallets, upgrade wallets.
+</Step>
+<Step title="Issue authenticators">
+Provision API keys and passkeys so users and automated systems can authenticate to Turnkey.
+</Step>
+<Step title="Write policies">
+Define policies that govern which users can sign which transactions, for which contracts, and under what conditions.
+</Step>
+<Step title="Sign transactions">
+Deploy, interact with, and upgrade your contracts through Turnkey's signing infrastructure, with every action enforced by your policies.
+</Step>
+</Steps>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Implementation guide" icon="book" href="/smart-contracts/implementation-guide">
+    Walk through a complete smart contract management setup.
+  </Card>
+  <Card title="Smart contract interfaces" icon="file-code" href="/concepts/policies/smart-contract-interfaces">
+    Upload ABIs and IDLs to write policies against contract call arguments.
+  </Card>
+</CardGroup>

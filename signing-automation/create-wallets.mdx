@@ -1,0 +1,117 @@
+---
+title: "Create Wallets"
+description: "Learn how to create HD wallets and derive accounts for signing transactions on any supported blockchain."
+sidebarTitle: "Create Wallets"
+---
+
+Before you can sign transactions, you need a wallet. Turnkey uses [hierarchical deterministic (HD) wallets](/concepts/wallets) that can derive millions of addresses across multiple blockchains from a single seed.
+
+## Create a wallet
+
+Use the Turnkey SDK to create a new wallet and derive your first account in a single call.
+
+<Tabs>
+<Tab title="TypeScript">
+```ts
+import { Turnkey } from "@turnkey/sdk-server";
+
+const turnkey = new Turnkey({
+  apiBaseUrl: "https://api.turnkey.com",
+  defaultOrganizationId: process.env.TURNKEY_ORGANIZATION_ID,
+  apiPrivateKey: process.env.TURNKEY_API_PRIVATE_KEY,
+  apiPublicKey: process.env.TURNKEY_API_PUBLIC_KEY,
+});
+
+const client = turnkey.apiClient();
+
+const wallet = await client.createWallet({
+  walletName: "my-wallet",
+  accounts: [
+    {
+      curve: "CURVE_SECP256K1",
+      pathFormat: "PATH_FORMAT_BIP32",
+      path: "m/44'/60'/0'/0/0",
+      addressFormat: "ADDRESS_FORMAT_ETHEREUM",
+    },
+  ],
+});
+
+console.log("Wallet ID:", wallet.walletId);
+console.log("Account address:", wallet.addresses[0]);
+```
+</Tab>
+<Tab title="CLI">
+```bash
+turnkey wallets create \
+  --name "my-wallet" \
+  --accounts '[{
+    "curve": "CURVE_SECP256K1",
+    "pathFormat": "PATH_FORMAT_BIP32",
+    "path": "m/44'\''/60'\''/0'\''/0/0",
+    "addressFormat": "ADDRESS_FORMAT_ETHEREUM"
+  }]'
+```
+</Tab>
+</Tabs>
+
+## Derive additional accounts
+
+After creating a wallet, you can derive additional accounts on different networks from the same seed.
+
+```ts
+const accounts = await client.createWalletAccounts({
+  walletId: wallet.walletId,
+  accounts: [
+    {
+      curve: "CURVE_ED25519",
+      pathFormat: "PATH_FORMAT_BIP32",
+      path: "m/44'/501'/0'/0'",
+      addressFormat: "ADDRESS_FORMAT_SOLANA",
+    },
+  ],
+});
+
+console.log("Solana address:", accounts.addresses[0]);
+```
+
+## Common account configurations
+
+| Network  | Curve             | Address Format              | Default Path           |
+| -------- | ----------------- | --------------------------- | ---------------------- |
+| Ethereum | `CURVE_SECP256K1` | `ADDRESS_FORMAT_ETHEREUM`   | `m/44'/60'/0'/0/0`    |
+| Solana   | `CURVE_ED25519`   | `ADDRESS_FORMAT_SOLANA`     | `m/44'/501'/0'/0'`    |
+| Bitcoin  | `CURVE_SECP256K1` | `ADDRESS_FORMAT_BITCOIN_MAINNET_P2TR` | `m/86'/0'/0'/0/0` |
+| Cosmos   | `CURVE_SECP256K1` | `ADDRESS_FORMAT_COSMOS`     | `m/44'/118'/0'/0/0`   |
+| Tron     | `CURVE_SECP256K1` | `ADDRESS_FORMAT_TRON`       | `m/44'/195'/0'/0/0`   |
+
+For the full list of supported address formats and curves, see [Wallets](/concepts/wallets).
+
+## Mnemonic length
+
+Wallet seeds are generated with a 12-word mnemonic by default. For additional security, you can specify a longer mnemonic (15, 18, 21, or 24 words) at creation time. The mnemonic length cannot be changed after the wallet is created.
+
+```ts
+const wallet = await client.createWallet({
+  walletName: "high-security-wallet",
+  mnemonicLength: 24,
+  accounts: [
+    {
+      curve: "CURVE_SECP256K1",
+      pathFormat: "PATH_FORMAT_BIP32",
+      path: "m/44'/60'/0'/0/0",
+      addressFormat: "ADDRESS_FORMAT_ETHEREUM",
+    },
+  ],
+});
+```
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Sign transactions" icon="pen" href="/embedded-wallets/code-examples/signing-transactions">
+    Start signing transactions with your new wallet.
+  </Card>
+  <Card title="Import existing wallets" icon="download" href="/products/transaction-automation/features/import-wallets">
+    Bring existing wallets into Turnkey.
+  </Card>
+</CardGroup>

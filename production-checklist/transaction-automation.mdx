@@ -3,6 +3,8 @@ title: "Transaction Automation Implementation Guide"
 description: "Implementing transaction automation with Turnkey"
 ---
 
+<Callout icon="notes" color="#D3D3D3">Goal: Help the user make key design decisions now, before getting to the code. </Callout>
+
 Turnkey's infrastructure provides a secure, flexible way to manage crypto operations at scale, letting you automate everything from
 routine payments and treasury transfers to smart contract deployments and NFT minting.
 
@@ -13,7 +15,7 @@ without compromising on security or user experience.
 
 Every transaction starts with a wallet. The way you structure them will shape how scalable and maintainable your automation setup is.
 
-**Option 1:** Single wallet with many accounts (HD path fan-out)  
+**Option 1:** Single wallet with many accounts (HD path fan-out)
 By default, Turnkey wallets use a hierarchical deterministic (HD) structure. That means you can generate unlimited accounts
 from a single wallet seed, each with its own address. This is ideal for:
 
@@ -23,7 +25,7 @@ from a single wallet seed, each with its own address. This is ideal for:
 
 This approach scales well and stays simple: one wallet, one policy, multiple accounts.
 
-**Option 2:** Multiple wallets in a single org  
+**Option 2:** Multiple wallets in a single org
 Use this when you need separation by use case. For example:
 
 - One wallet for treasury ops
@@ -34,7 +36,7 @@ Policies can be set at the wallet level to enforce clear boundaries (e.g. only c
 Note Turnkey's [resource limits](https://docs.turnkey.com/concepts/resource-limits#resource-limits) and ensure your intended
 scaled implementation fits within those limits.
 
-**Option 3:** Separate sub-orgs per wallet  
+**Option 3:** Separate sub-orgs per wallet
 This option is best when you need strict isolation — e.g. multi-tenant environments, or wallets with different authentication requirements.
 Each sub-org has its own root users and policy namespace. Downside: more setup, more moving parts.
 
@@ -44,7 +46,7 @@ Most teams use a combination: they generate many accounts under a few wallets an
 
 Transaction automation can be reactive, proactive, or user-driven. The right model depends on your use case.
 
-**Event-driven (most common):**  
+**Event-driven (most common):**
 A transaction is triggered by an external event — a webhook, an internal job, or an offchain signal. Examples:
 
 - Market resolution triggers a payout
@@ -53,10 +55,10 @@ A transaction is triggered by an external event — a webhook, an internal job, 
 
 Use a background worker or event system to translate that trigger into a signing request.
 
-**Scheduled:**  
+**Scheduled:**
 Useful for treasury management, yield compounding, or periodic distribution flows. Run a job hourly/daily and trigger signing from there.
 
-**Manual with automation fallback:**  
+**Manual with automation fallback:**
 Sometimes a human should have the final say, but you want the transaction to be ready to go. You can submit a tx to Turnkey
 that requires approval, then notify a signer via Slack, email, or dashboard.
 
@@ -67,7 +69,7 @@ Tip: Think in terms of "intent capture" (when does your system decide something 
 
 Policies are your automation safety net. Every action goes through the policy engine before it's allowed, and is explicitly denied by default.
 
-You'll want to decide:  
+You'll want to decide:
 **How many approvers?**
 
 - Use single-party approvals for low-risk flows (e.g. daily payouts)
@@ -98,17 +100,17 @@ Most automation systems have 3-5 core policies and evolve them as their product 
 
 All interfaces (CLI, SDK, API) go through the same policy and enclave flow. The only difference is where your logic lives.
 
-**CLI:**  
+**CLI:**
 Best for prototyping or scripting internal workflows (e.g. rotate a key, create a wallet). You can also use it in CI pipelines.
 
-**SDK:**  
+**SDK:**
 Ideal for integrating into apps or backend services. Available in multiple programming languages. Handles signing, retries,
 and activity submission.
 
-**Direct API:**  
+**Direct API:**
 Use this if you want full control or are building from a non-standard language. Slightly more effort to get right, but fully supported.
 
-**Dashboard:**  
+**Dashboard:**
 Not for automation — but useful for manual approval flows, audit trails, and monitoring.
 
 **Common pattern:**
@@ -127,7 +129,7 @@ by Turnkey, or by anything else running on the page. On mobile, session keys wil
 The biggest decision is how long sessions should last. Longer-lived sessions reduce friction, enabling users to stay signed in across reloads,
 tabs, or app restarts. For most embedded wallet use cases, long-lived sessions in IndexedDB strike a good balance between usability and safety.
 
-Scoping  
+Scoping
 You'll also want to decide whether your sessions should be scoped.
 
 Scoped sessions allow you to define exactly what a given session key is allowed to do — and enforce it via Turnkey's policy engine. For example,

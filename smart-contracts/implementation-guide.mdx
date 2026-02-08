@@ -1,0 +1,67 @@
+---
+title: "Smart Contract Implementation Guide"
+description: "A step-by-step guide to setting up Turnkey for secure smart contract management — from organization setup through policy-enforced signing."
+sidebarTitle: "Implementation Guide"
+---
+
+This guide walks through a complete setup for managing smart contracts with Turnkey. By the end, you will have an organization with defined users, dedicated signing wallets, proper authentication, and policies that enforce exactly who can interact with your contracts.
+
+## Prerequisites
+
+- A [Turnkey account](https://app.turnkey.com/dashboard/auth/initial) with an organization created
+- The [`@turnkey/sdk-server`](https://www.npmjs.com/package/@turnkey/sdk-server) package installed
+- An API key pair for your root user (generated during onboarding)
+
+## Architecture overview
+
+A typical smart contract management setup looks like this:
+
+| Component | Purpose |
+| --- | --- |
+| **Organization** | The top-level container for all resources |
+| **Users** | Human operators and machine accounts with tagged roles |
+| **Wallets** | HD wallets that hold the keys used for contract deployment and interaction |
+| **Authenticators** | API keys (for machines) and passkeys (for humans) that prove identity |
+| **Policies** | Rules that govern which users can sign which transactions |
+
+## Walkthrough
+
+The following sections detail each step. Follow them in order for a complete setup.
+
+<CardGroup cols={2}>
+  <Card title="1. Define users" icon="users" href="/smart-contracts/define-users">
+    Create operators and machine users with appropriate roles.
+  </Card>
+  <Card title="2. Set up signing keys" icon="key" href="/smart-contracts/set-up-signing-keys">
+    Create dedicated wallets for contract operations.
+  </Card>
+  <Card title="3. Issue authenticators" icon="fingerprint" href="/smart-contracts/issue-authenticators">
+    Provision credentials for human and machine users.
+  </Card>
+  <Card title="4. Write policies" icon="shield" href="/smart-contracts/write-policies">
+    Define rules that govern contract interactions.
+  </Card>
+  <Card title="5. Sign transactions" icon="pen" href="/smart-contracts/sign-transactions">
+    Deploy and interact with your contracts.
+  </Card>
+</CardGroup>
+
+## Example: Stablecoin management
+
+Consider a stablecoin contract where you need:
+
+- A **deployer** who can publish the contract
+- A **minter** who can issue new tokens, with amount limits
+- An **upgrade owner** who can upgrade the implementation, only when explicitly authorized
+
+With Turnkey, each role maps to a user with a dedicated wallet and a scoped policy:
+
+```
+Deployer user  →  deployer-wallet  →  policy: allow deploy to chain 1
+Minter user    →  minter-wallet    →  policy: allow mint() up to 1M tokens
+Upgrade owner  →  upgrade-wallet   →  policy: allow upgrade() (temporary, revoked after use)
+```
+
+This "Security as Code" approach ensures that every contract interaction is explicitly authorized, auditable, and enforced by Turnkey's infrastructure.
+
+For a working implementation, see the [Smart Contract Management demo on GitHub](https://github.com/tkhq/solutions/tree/main/smart-contract-mgmt).

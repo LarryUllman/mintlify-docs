@@ -1,0 +1,100 @@
+---
+title: "Set Up Signing Keys"
+description: "Create dedicated wallets for each role in your smart contract management workflow."
+sidebarTitle: "Set Up Signing Keys"
+---
+
+Each role in your smart contract workflow needs its own wallet. This ensures that policies can scope permissions to specific keys and that contract ownership is clearly assigned.
+
+## Wallet strategy
+
+Create separate wallets for each responsibility:
+
+| Wallet | Purpose | Example usage |
+| --- | --- | --- |
+| **Deployer wallet** | Deploys contracts | `CREATE` transactions |
+| **Operator wallet** | Day-to-day contract calls | `mint()`, `transfer()`, `pause()` |
+| **Upgrade wallet** | Contract upgrades | `upgradeTo()` via proxy |
+| **Treasury wallet** | Holds protocol funds | Transfers, approvals |
+
+## Create wallets
+
+```ts
+const client = turnkey.apiClient();
+
+// Deployer wallet — Ethereum
+const deployerWallet = await client.createWallet({
+  walletName: "deployer-wallet",
+  accounts: [
+    {
+      curve: "CURVE_SECP256K1",
+      pathFormat: "PATH_FORMAT_BIP32",
+      path: "m/44'/60'/0'/0/0",
+      addressFormat: "ADDRESS_FORMAT_ETHEREUM",
+    },
+  ],
+});
+
+// Operator wallet — same chain
+const operatorWallet = await client.createWallet({
+  walletName: "operator-wallet",
+  accounts: [
+    {
+      curve: "CURVE_SECP256K1",
+      pathFormat: "PATH_FORMAT_BIP32",
+      path: "m/44'/60'/0'/0/0",
+      addressFormat: "ADDRESS_FORMAT_ETHEREUM",
+    },
+  ],
+});
+
+// Upgrade wallet — kept dormant until needed
+const upgradeWallet = await client.createWallet({
+  walletName: "upgrade-wallet",
+  accounts: [
+    {
+      curve: "CURVE_SECP256K1",
+      pathFormat: "PATH_FORMAT_BIP32",
+      path: "m/44'/60'/0'/0/0",
+      addressFormat: "ADDRESS_FORMAT_ETHEREUM",
+    },
+  ],
+});
+
+console.log("Deployer address:", deployerWallet.addresses[0]);
+console.log("Operator address:", operatorWallet.addresses[0]);
+console.log("Upgrade address:", upgradeWallet.addresses[0]);
+```
+
+## Multi-chain wallets
+
+If your contracts span multiple networks, derive additional accounts from the same wallet:
+
+```ts
+// Add a Solana account to the operator wallet
+await client.createWalletAccounts({
+  walletId: operatorWallet.walletId,
+  accounts: [
+    {
+      curve: "CURVE_ED25519",
+      pathFormat: "PATH_FORMAT_BIP32",
+      path: "m/44'/501'/0'/0'",
+      addressFormat: "ADDRESS_FORMAT_SOLANA",
+    },
+  ],
+});
+```
+
+## Fund the deployer
+
+Before deploying contracts, the deployer wallet needs native tokens for gas. Transfer funds to the deployer address from your funding source.
+
+<Note>
+Record each wallet ID and its associated role. You will reference these when writing policies in a later step.
+</Note>
+
+## Next step
+
+<Card title="Issue authenticators" icon="fingerprint" href="/smart-contracts/issue-authenticators">
+  Provision credentials for your users.
+</Card>

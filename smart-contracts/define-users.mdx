@@ -1,0 +1,88 @@
+---
+title: "Define Users"
+description: "Create and configure users within your Turnkey organization to establish roles for smart contract management."
+sidebarTitle: "Define Users"
+---
+
+The first step in setting up smart contract management is defining the users who will interact with your contracts. Each user represents either a human operator or a machine account, and can be tagged with roles that policies reference.
+
+## User roles for smart contract management
+
+A typical setup includes:
+
+| Role | Type | Purpose |
+| --- | --- | --- |
+| **Deployer** | Machine or human | Deploys contracts to the blockchain |
+| **Operator** | Machine | Performs routine operations (minting, transfers, pausing) |
+| **Upgrade owner** | Human | Authorizes contract upgrades (high-sensitivity) |
+| **Admin** | Human | Manages organization settings and policies |
+
+## Create users
+
+Use the Turnkey SDK to create users and assign them tags that represent their roles.
+
+<Tabs>
+<Tab title="TypeScript">
+```ts
+import { Turnkey } from "@turnkey/sdk-server";
+
+const turnkey = new Turnkey({
+  apiBaseUrl: "https://api.turnkey.com",
+  defaultOrganizationId: process.env.TURNKEY_ORGANIZATION_ID,
+  apiPrivateKey: process.env.TURNKEY_API_PRIVATE_KEY,
+  apiPublicKey: process.env.TURNKEY_API_PUBLIC_KEY,
+});
+
+const client = turnkey.apiClient();
+
+// First, create user tags for roles
+const deployerTag = await client.createUserTag({
+  userTagName: "deployer",
+  userIds: [],
+});
+
+const operatorTag = await client.createUserTag({
+  userTagName: "operator",
+  userIds: [],
+});
+
+// Create a machine user for automated deployments
+const users = await client.createUsers({
+  users: [
+    {
+      userName: "contract-deployer",
+      userEmail: "deployer@example.com",
+      userTags: [deployerTag.userTagId],
+      apiKeys: [], // added in the authenticators step
+      authenticators: [],
+    },
+    {
+      userName: "contract-operator",
+      userEmail: "operator@example.com",
+      userTags: [operatorTag.userTagId],
+      apiKeys: [],
+      authenticators: [],
+    },
+  ],
+});
+
+console.log("Created users:", users.userIds);
+```
+</Tab>
+</Tabs>
+
+## User tags as roles
+
+User tags are the bridge between users and policies. When you write a policy like "allow users tagged `deployer` to sign deployment transactions," Turnkey enforces it automatically.
+
+Best practices for user tags:
+
+- **Use descriptive names** — `deployer`, `minter`, `upgrade-owner` rather than generic labels
+- **Keep tags granular** — A user can have multiple tags, so prefer narrow roles over broad ones
+- **Plan for separation of duties** — The user who deploys a contract should not be the same user who can upgrade it
+
+## Next step
+
+<Card title="Set up signing keys" icon="key" href="/smart-contracts/set-up-signing-keys">
+  Create dedicated wallets for each role.
+</Card>

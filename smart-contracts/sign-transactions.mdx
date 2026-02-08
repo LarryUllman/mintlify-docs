@@ -1,0 +1,117 @@
+---
+title: "Sign Transactions"
+description: "Sign smart contract deployment and interaction transactions through Turnkey with policy enforcement."
+sidebarTitle: "Sign Transactions"
+---
+
+With users, wallets, authenticators, and policies in place, you can now sign smart contract transactions. Every signing request is evaluated against your policies before a signature is produced.
+
+## Deploy a contract
+
+Use the deployer wallet to sign a contract deployment transaction. This example uses the Turnkey Ethers signer:
+
+```ts
+import { Turnkey } from "@turnkey/sdk-server";
+import { TurnkeySigner } from "@turnkey/ethers";
+import { ethers } from "ethers";
+
+const turnkey = new Turnkey({
+  apiBaseUrl: "https://api.turnkey.com",
+  defaultOrganizationId: process.env.TURNKEY_ORGANIZATION_ID,
+  apiPrivateKey: process.env.TURNKEY_API_PRIVATE_KEY,
+  apiPublicKey: process.env.TURNKEY_API_PUBLIC_KEY,
+});
+
+const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
+
+const deployerSigner = new TurnkeySigner({
+  client: turnkey.apiClient(),
+  organizationId: process.env.TURNKEY_ORGANIZATION_ID,
+  signWith: "<deployer-wallet-address>",
+});
+const connectedSigner = deployerSigner.connect(provider);
+
+// Deploy using ethers ContractFactory
+const factory = new ethers.ContractFactory(abi, bytecode, connectedSigner);
+const contract = await factory.deploy(/* constructor args */);
+await contract.waitForDeployment();
+
+console.log("Contract deployed at:", await contract.getAddress());
+```
+
+## Call a contract function
+
+Once deployed, interact with the contract using the operator wallet:
+
+```ts
+const operatorSigner = new TurnkeySigner({
+  client: turnkey.apiClient(),
+  organizationId: process.env.TURNKEY_ORGANIZATION_ID,
+  signWith: "<operator-wallet-address>",
+});
+const connectedOperator = operatorSigner.connect(provider);
+
+const contract = new ethers.Contract(
+  "<contract-address>",
+  abi,
+  connectedOperator
+);
+
+// This call is evaluated against your policies before signing
+const tx = await contract.mint("<recipient-address>", ethers.parseUnits("1000", 18));
+await tx.wait();
+
+console.log("Mint transaction:", tx.hash);
+```
+
+If the transaction violates a policy (e.g., minting more than the allowed amount), Turnkey rejects the signing request and returns a policy evaluation error.
+
+## Handle policy rejections
+
+When a signing request is denied by policy, the SDK throws an error with details about which policy caused the rejection:
+
+```ts
+try {
+  const tx = await contract.mint(recipient, amount);
+  await tx.wait();
+} catch (error) {
+  if (error.message.includes("OUTCOME_DENY")) {
+    console.error("Policy rejected this transaction:", error.message);
+    // Log for audit, alert the team, etc.
+  }
+  throw error;
+}
+```
+
+## Multi-party approval flow
+
+For actions that require consensus (e.g., contract upgrades), the signing request enters a pending state until the required approvers sign off:
+
+```ts
+// Initiator submits the upgrade transaction
+// Turnkey returns an activity in PENDING state
+const activity = await client.signTransaction({
+  signWith: "<upgrade-wallet-address>",
+  unsignedTransaction: upgradeTxPayload,
+  type: "TRANSACTION_TYPE_ETHEREUM",
+});
+
+// activity.status === "ACTIVITY_STATUS_PENDING"
+// Other upgrade owners approve via dashboard or API:
+await client.approveActivity({
+  fingerprint: activity.fingerprint,
+});
+
+// Once the consensus threshold is met, the transaction is signed
+```
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Observe and audit" icon="eye" href="/signing-automation/observe-and-audit">
+    Monitor signing activity and maintain audit trails.
+  </Card>
+  <Card title="Smart contract interfaces" icon="file-code" href="/concepts/policies/smart-contract-interfaces">
+    Upload ABIs and IDLs for fine-grained policy control.
+  </Card>
+</CardGroup>
