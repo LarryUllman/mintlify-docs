@@ -75,7 +75,9 @@
               "smart-contracts/set-up-signing-keys",
               "smart-contracts/issue-authenticators",
               "smart-contracts/write-policies",
-              "smart-contracts/sign-transactions"
+              "smart-contracts/execute-contracts",
+              "smart-contracts/pause-contracts",
+              "smart-contracts/upgrade-contracts"
             ]
           }
         ]
