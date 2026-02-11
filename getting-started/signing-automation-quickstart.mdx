@@ -1,130 +1,133 @@
 ---
 title: "Transaction automation quickstart"
-description: "Turnkey's transaction automation enables you to build secure, programmatic signing workflows directly into your applications. With features like customizable policies, multi-party approvals, and support for any blockchain, you can confidently automate complex signing operations while maintaining enterprise-grade security."
-sidebarTitle: "Transaction automation"
+description: "Build fast and secure programmatic signing workflows directly into your application."
 ---
 
-<Callout icon="notes" color="#D3D3D3">Goal: Get the user to see some Turnkey magic--and introduce some basic concepts--in under 30 minutes. Then move them further into the docs. TODO Make descriptions way shorter and less marketing-y.</Callout>
-
-## Create an account and get your organization ID
-
-Navigate to the [Turnkey Dashboard](https://app.turnkey.com/dashboard/auth/initial) to create an account and set up your organization
-
-Once logged in, open the user dropdown at the top right. Your Organization ID is listed there. Copy it for use in your code or environment variables.
-
-<Frame>
-  <img src="/images/getting-started/img/quickstart/org-id.png" />
-</Frame>
-
-## Install the CLI
-
-Install the Turnkey CLI:
-
-```bash
-brew install tkhq/tap/turnkey
-```
-
-We use Homebrew for a quick installation process. For a more secure installation that requires no trust in external parties, see our [CLI repository](https://github.com/tkhq/tkcli).
-
-## Transaction signing
+<Callout icon="notes" color="#D3D3D3">Goal: Get the user to see some Turnkey magic--and introduce some basic concepts--in under 30 minutes. Then move them further into the docs. TBD on the best final title.</Callout>
 
 <Steps>
-<Step title="Setup">
 
-Set the `ORGANIZATION_ID` environment variable to your organization ID. This will be used to identify your organization in the API requests.
+  <Step title="Set up your environment" titleSize="h2">
+    <AccordionGroup>
+      <Accordion title="Create your account" defaultOpen="true" icon="id-badge" iconType="duotone">
 
-```bash
-export ORGANIZATION_ID=<YOUR_ORGANIZATION_ID>
-```
+        Navigate to the [Turnkey Dashboard](https://app.turnkey.com/dashboard/auth/initial) to create an account and set up your organization.
 
-An API keypair is required to authenticate requests to the Turnkey API.
+        Once logged in, open the user dropdown at the top right. Your Organization ID is listed there. Copy it for use in your code or environment variables.
 
-Create a new key named `quickstart` using the turnkey CLI:
+        <Frame>
+          <img src="/images/getting-started/img/quickstart/org-id.png" />
+        </Frame>
 
-```bash
-turnkey generate api-key --organization $ORGANIZATION_ID --key-name quickstart
-```
+      </Accordion>
+      <Accordion title="Install the CLI" icon="terminal" iconType="duotone">
 
-You'll see output like this:
+        Install the Turnkey CLI:
 
-```json
-{
-  "privateKeyFile": "/home/user/.config/turnkey/keys/quickstart.private",
-  "publicKey": "03...72",
-  "publicKeyFile": "/home/user/.config/turnkey/keys/quickstart.public"
-}
-```
+        ```bash
+        brew install tkhq/tap/turnkey
+        ```
 
-Follow the instructions in this [guide](/sdks/cli#add-your-public-api-key) to add your new public API key to your organization via the dashboard.
+        <Tip>For a more secure installation that avoids trusting external parties (here, Homebrew), see the [CLI repository](https://github.com/tkhq/tkcli).</Tip>
 
-</Step>
-<Step title="Create wallet">
+      </Accordion>
+      <Accordion title="Store your Organization ID" icon="dollar-sign" iconType="duotone">
 
-Wallets are collections of cryptographic key pairs typically used for sending and receiving digital assets. To create one, we need to provide a name:
+        Assign your Organization ID to the `ORGANIZATION_ID` environment variable. This is used to identify your organization in the following commands and API requests.
 
-```bash
-turnkey wallets create --name default --key-name quickstart
-```
+        ```bash
+        export ORGANIZATION_ID=<YOUR_ORGANIZATION_ID>
+        ```
 
-<Note>
-  This command requires a key named `quickstart` to exist in your configuration. This key should have been created during the [Quickstart](/getting-started/quickstart) guide. If you haven't created it yet, please complete the initial setup steps first.
+      </Accordion>
 
-If the key doesn't exist, you'll see an error like this:
+      <Accordion title="Generate an API key" icon="key" iconType="duotone">
 
-```json
-{
-  "error": "failed to load key bytes \"quickstart\": failed to read from \"/.config/turnkey/keys/quickstart.private\": open /.config/turnkey/keys/quickstart.private: no such file or directory"
-}
-```
+        You need an API key to authenticate Turnkey API requests.
 
-If the key exists but has not been added to your organization, you'll see an error like this:
+        Create a new key named `quickstart` using the Turnkey CLI:
 
-```json
-{
-  "error": "failed to associate the API key with an organization; please manually specify the organization ID"
-}
-```
+        ```bash wrap
+        turnkey generate api-key --organization $ORGANIZATION_ID --key-name quickstart
+        ```
 
-</Note>
-</Step>
-<Step title="Create Ethereum account">
+        You'll see output like:
 
-To create a cryptographic key pair on our new wallet, we need to pass our desired address format:
+        ```json
+        {
+          "privateKeyFile": "/home/user/.config/turnkey/keys/quickstart.private",
+          "publicKey": "03...72",
+          "publicKeyFile": "/home/user/.config/turnkey/keys/quickstart.public"
+        }
+        ```
 
-```bash
-turnkey wallets accounts create --wallet default --address-format ADDRESS_FORMAT_ETHEREUM --key-name quickstart
-```
+        The `quickstart` API key is used in every one of the remaining steps.
 
-This command will produce an Ethereum address (e.g. `0x08cb1216C95149DF66978b574E484869512CE2bF`) that we'll need to sign a transaction. You can see your new Wallet account with:
+        <Info>You can also create API keys in the Turnkey Dashboard. [TODO LINK WHEN DOCS IA IS SET.]</Info>
 
-```bash
-turnkey wallets accounts list --wallet default --key-name quickstart
-```
+      </Accordion>
 
-</Step>
-<Step title="Sign a transaction">
+    </AccordionGroup>
+  </Step>
 
-Now you can sign an Ethereum transaction with this new address with our [`sign_transaction` endpoint](/api-reference/signing/sign-transaction). Make sure to replace the `unsignedTransaction` below with your own. You can use our [simple transaction generator](https://build.tx.xyz) if you need a quick transaction for testing:
+  <Step title="Create an Ethereum wallet" titleSize="h2">
+    <AccordionGroup>
+      <Accordion title="Initialize a wallet" defaultOpen="true" icon="wallet" iconType="duotone">
 
-```bash
-turnkey request --path /public/v1/submit/sign_transaction --body '{
-    "timestampMs": "'"$(date +%s)"'000",
-    "type": "ACTIVITY_TYPE_SIGN_TRANSACTION_V2",
-    "organizationId": "'"$ORGANIZATION_ID"'",
-    "parameters": {
-      "type": "TRANSACTION_TYPE_ETHEREUM",
-      "signWith": "<Your Ethereum address>",
-      "unsignedTransaction": "<Your Transaction>"
-    }
-}' --key-name quickstart
-```
+        Wallets are collections of cryptographic key pairs typically used for sending and receiving digital assets. To create a wallet using the Turnkey CLI, provide a name and API key:
 
-If you'd like to broadcast your transaction, you can easily do so
-via [Etherscan](https://etherscan.io/pushTx).
+        ```bash
+        turnkey wallets create --name default --key-name quickstart
+        ```
 
-</Step>
+      </Accordion>
+      <Accordion title="Generate an Ethereum address" icon="ethereum" iconType="duotone">
+
+        To create a cryptographic key pair on the wallet, pass the desired address format:
+
+        ```bash wrap
+        turnkey wallets accounts create --wallet default --address-format ADDRESS_FORMAT_ETHEREUM --key-name quickstart
+        ```
+
+        This command produces an Ethereum address (such as `0x08cb1216C95149DF66978b574E484869512CE2bF`) needed to sign a transaction. [TODO LINK TO OTHER FORMATS WHEN DOCS IA IS SET.]
+
+        You can view your wallet with:
+
+        ```bash wrap
+        turnkey wallets accounts list --wallet default --key-name quickstart
+        ```
+
+      </Accordion>
+
+    </AccordionGroup>
+
+  </Step>
+
+  <Step title="Sign a transaction" titleSize="h2">
+
+    Now you can sign an Ethereum transaction with this new address using the [sign_transaction] API endpoint(/api-reference/signing/sign-transaction).
+
+    Replace the `unsignedTransaction` value below with your own, actual transaction ID. If you need a quick transaction for testing, use Turnkey's [simple transaction generator](https://build.tx.xyz).
+
+    ```bash
+    turnkey request --path /public/v1/submit/sign_transaction --body '{
+        "timestampMs": "'"$(date +%s)"'000",
+        "type": "ACTIVITY_TYPE_SIGN_TRANSACTION_V2",
+        "organizationId": "'"$ORGANIZATION_ID"'",
+        "parameters": {
+          "type": "TRANSACTION_TYPE_ETHEREUM",
+          "signWith": "<Your Ethereum address>",
+          "unsignedTransaction": "<Your Transaction>"
+        }
+    }' --key-name quickstart
+    ```
+
+    <Tip>If you'd like to broadcast the transaction, use [Etherscan](https://etherscan.io/pushTx).</Tip>
+
+  </Step>
+
 </Steps>
 
 ## Next steps
 
-Check out the [Automate transactions overview](/signing-automation/automate-transactions-overview) to learn more about integrating transaction automation and our powerful features.
+Check out the [Automate transactions overview](/signing-automation/automate-transactions-overview) to learn more about transaction automation.
