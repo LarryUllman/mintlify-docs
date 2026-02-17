@@ -31,6 +31,25 @@ description: "Build fast and secure programmatic signing workflows directly into
         <Tip>For a more secure installation that avoids trusting external parties (here, Homebrew), see the [CLI repository](https://github.com/tkhq/tkcli).</Tip>
 
       </Accordion>
+      <Accordion title="Install your preferred SDK (optional)" icon="code" iconType="duotone">
+
+        You can use the CLI for the rest of this quickstart, or begin creating a more real-world integration by using your preferred SDK instead.
+
+        <CodeGroup>
+
+          ```javascript JavaScript
+          npm install @turnkey/sdk-server
+          ```
+
+          ```python Python
+          pip install turnkey-http turnkey-api-key-stamper
+          ```
+
+        </CodeGroup>
+
+        <Callout icon="notes" color="#D3D3D3">Note: Just put in JavaScript and Python for proof of concept. We may also decided that adding the SDKs here makes the quickstart too long (i.e., no longer quick enough).</Callout>
+
+      </Accordion>
       <Accordion title="Store your Organization ID" icon="dollar-sign" iconType="duotone">
 
         Assign your Organization ID to the `ORGANIZATION_ID` environment variable. This is used to identify your organization in the following commands and API requests.
@@ -74,28 +93,64 @@ description: "Build fast and secure programmatic signing workflows directly into
     <AccordionGroup>
       <Accordion title="Initialize a wallet" defaultOpen="true" icon="wallet" iconType="duotone">
 
-        Wallets are collections of cryptographic key pairs typically used for sending and receiving digital assets. To create a wallet using the Turnkey CLI, provide a name and API key:
+        Wallets are collections of cryptographic key pairs typically used for sending and receiving digital assets. To create a wallet, provide a name and API key:
 
-        ```bash
-        turnkey wallets create --name default --key-name quickstart
-        ```
+        <CodeGroup>
+
+          ```bash CLI
+          turnkey wallets create --name default --key-name quickstart
+          ```
+
+          ```javascript JavaScript
+          TODO ACTUAL CODE (if keeping)
+          ```
+
+          ```python Python
+          TODO ACTUAL CODE (if keeping)
+          ```
+
+        </CodeGroup>
 
       </Accordion>
       <Accordion title="Generate an Ethereum address" icon="ethereum" iconType="duotone">
 
         To create a cryptographic key pair on the wallet, pass the desired address format:
 
-        ```bash wrap
-        turnkey wallets accounts create --wallet default --address-format ADDRESS_FORMAT_ETHEREUM --key-name quickstart
-        ```
+        <CodeGroup>
+
+          ```bash CLI
+          turnkey wallets accounts create --wallet default --address-format ADDRESS_FORMAT_ETHEREUM --key-name quickstart
+          ```
+
+          ```javascript JavaScript
+          TODO ACTUAL CODE (if keeping)
+          ```
+
+          ```python Python
+          TODO ACTUAL CODE (if keeping)
+          ```
+
+        </CodeGroup>
 
         This command produces an Ethereum address (such as `0x08cb1216C95149DF66978b574E484869512CE2bF`) needed to sign a transaction. [TODO LINK TO OTHER FORMATS WHEN DOCS IA IS SET.]
 
         You can view your wallet with:
 
-        ```bash wrap
-        turnkey wallets accounts list --wallet default --key-name quickstart
-        ```
+        <CodeGroup>
+
+          ```bash CLI
+          turnkey wallets accounts list --wallet default --key-name quickstart
+          ```
+
+          ```javascript JavaScript
+          TODO ACTUAL CODE (if keeping)
+          ```
+
+          ```python Python
+          TODO ACTUAL CODE (if keeping)
+          ```
+
+        </CodeGroup>
 
       </Accordion>
 
@@ -105,22 +160,34 @@ description: "Build fast and secure programmatic signing workflows directly into
 
   <Step title="Sign a transaction" titleSize="h2">
 
-    Now you can sign an Ethereum transaction with this new address using the [sign_transaction] API endpoint(/api-reference/signing/sign-transaction).
+    Now you can sign an Ethereum transaction with this new address using the [sign_transaction](/api-reference/signing/sign-transaction) API endpoint.
 
     Replace the `unsignedTransaction` value below with your own, actual transaction ID. If you need a quick transaction for testing, use Turnkey's [simple transaction generator](https://build.tx.xyz).
 
-    ```bash
-    turnkey request --path /public/v1/submit/sign_transaction --body '{
-        "timestampMs": "'"$(date +%s)"'000",
-        "type": "ACTIVITY_TYPE_SIGN_TRANSACTION_V2",
-        "organizationId": "'"$ORGANIZATION_ID"'",
-        "parameters": {
-          "type": "TRANSACTION_TYPE_ETHEREUM",
-          "signWith": "<Your Ethereum address>",
-          "unsignedTransaction": "<Your Transaction>"
-        }
-    }' --key-name quickstart
-    ```
+    <CodeGroup>
+
+      ```bash CLI
+      turnkey request --path /public/v1/submit/sign_transaction --body '{
+          "timestampMs": "'"$(date +%s)"'000",
+          "type": "ACTIVITY_TYPE_SIGN_TRANSACTION_V2",
+          "organizationId": "'"$ORGANIZATION_ID"'",
+          "parameters": {
+            "type": "TRANSACTION_TYPE_ETHEREUM",
+            "signWith": "<Your Ethereum address>",
+            "unsignedTransaction": "<Your Transaction>"
+          }
+      }' --key-name quickstart
+      ```
+
+      ```javascript JavaScript
+      TODO ACTUAL CODE (if keeping)
+      ```
+
+      ```python Python
+      TODO ACTUAL CODE (if keeping)
+      ```
+
+    </CodeGroup>
 
     <Tip>If you'd like to broadcast the transaction, use [Etherscan](https://etherscan.io/pushTx).</Tip>
 
