@@ -40,8 +40,8 @@
               "concepts/overview",
               "concepts/organizations",
               "concepts/users/introduction",
-              "concepts/wallets",
               "concepts/policies/overview",
+              "concepts/wallets",
               "concepts/resource-limits",
               "products/transaction-automation/features/security/quorum-os"
             ]
@@ -54,6 +54,7 @@
               "production-checklist/transaction-automation",
               "signing-automation/create-wallets",
               "embedded-wallets/code-examples/signing-transactions",
+              "products/transaction-automation/features/multi-chain-support",
               "signing-automation/observe-and-audit",
               {
                 "group": "Advanced Uses",
