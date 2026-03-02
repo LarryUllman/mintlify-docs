@@ -1,7 +1,292 @@
 ---
-title: "Pause Contracts"
+title: "Pause contracts"
 description: "Pause and unpause smart contracts using Turnkey's signing infrastructure and policy controls."
-sidebarTitle: "Pause Contracts"
+sidebarTitle: "Pause contracts"
 ---
 
-Placeholder content for pausing and unpausing smart contracts.
+Learn how to upload your contract's Application Binary Interface (ABI), write scoped pause policies, and execute pause and unpause transactions through a Turnkey signer.
+
+## Prerequisites
+
+- A Turnkey organization with at least one [user](/smart-contracts/define-users) tagged `pauser` and one tagged `unpauser`
+- A [wallet](/smart-contracts/set-up-signing-keys) provisioned for emergency signing
+- A deployed contract that implements a `pause()` and `unpause()` function (such as OpenZeppelin's `Pausable`)
+
+<Steps>
+
+<Step title="Upload the contract ABI" titleSize="h2">
+
+Before you can write policies that reference `pause` or `unpause` by function name, upload the contract's ABI to Turnkey. This allows the policy engine to decode transaction call data and match against specific function names and arguments.
+
+<CodeGroup>
+
+```typescript TypeScript
+import { Turnkey } from "@turnkey/sdk-server";
+
+const turnkey = new Turnkey({
+  apiBaseUrl: "https://api.turnkey.com",
+  defaultOrganizationId: process.env.TURNKEY_ORGANIZATION_ID,
+  apiPrivateKey: process.env.TURNKEY_API_PRIVATE_KEY,
+  apiPublicKey: process.env.TURNKEY_API_PUBLIC_KEY,
+});
+
+const client = turnkey.apiClient();
+
+const abi = [
+  // Your contract ABI here — only the relevant fragments are needed
+  {
+    "name": "pause",
+    "type": "function",
+    "inputs": [],
+    "outputs": []
+  },
+  {
+    "name": "unpause",
+    "type": "function",
+    "inputs": [],
+    "outputs": []
+  }
+];
+
+await client.createSmartContractInterface({
+  label: "MyProtocol mainnet",
+  notes: "Pausable protocol contract",
+  type: "SMART_CONTRACT_INTERFACE_TYPE_ETHEREUM",
+  smartContractAddress: "<contract-address>",
+  smartContractInterface: JSON.stringify(abi),
+});
+```
+
+```python Python
+import json
+import os
+from turnkey import TurnkeyClient
+
+client = TurnkeyClient(
+    api_base_url="https://api.turnkey.com",
+    organization_id=os.environ["TURNKEY_ORGANIZATION_ID"],
+    api_private_key=os.environ["TURNKEY_API_PRIVATE_KEY"],
+    api_public_key=os.environ["TURNKEY_API_PUBLIC_KEY"],
+)
+
+abi = [
+    # Your contract ABI here — only the relevant fragments are needed
+    {"name": "pause", "type": "function", "inputs": [], "outputs": []},
+    {"name": "unpause", "type": "function", "inputs": [], "outputs": []},
+]
+
+client.create_smart_contract_interface(
+    label="MyProtocol mainnet",
+    notes="Pausable protocol contract",
+    type="SMART_CONTRACT_INTERFACE_TYPE_ETHEREUM",
+    smart_contract_address="<contract-address>",
+    smart_contract_interface=json.dumps(abi),
+)
+```
+
+</CodeGroup>
+
+<Tip>
+You only need to upload ABI fragments for the functions you want to reference in policies but you can upload full ABIs, if you want.
+</Tip>
+
+</Step>
+
+<Step title="Write a policy to allow pausing" titleSize="h2">
+
+Create a policy that allows users tagged `pauser` to sign `pause()` transactions against your contract. Any signing request without a matching `EFFECT_ALLOW` policy is denied by default.
+
+<CodeGroup>
+
+```typescript TypeScript
+await client.createPolicy({
+  policyName: "Allow pausers to call pause()",
+  effect: "EFFECT_ALLOW",
+  condition:
+    "eth.tx.to == '<contract-address>' && " +
+    "eth.tx.function_name == 'pause' && " +
+    "activity.initiator.tags.contains('pauser')",
+  notes: "Emergency pause — any pauser-tagged user can halt the contract",
+});
+```
+
+```python Python
+client.create_policy(
+    policy_name="Allow pausers to call pause()",
+    effect="EFFECT_ALLOW",
+    condition=(
+        "eth.tx.to == '<contract-address>' && "
+        "eth.tx.function_name == 'pause' && "
+        "activity.initiator.tags.contains('pauser')"
+    ),
+    notes="Emergency pause — any pauser-tagged user can halt the contract",
+)
+```
+
+</CodeGroup>
+
+</Step>
+
+<Step title="Write a policy to allow unpausing" titleSize="h2">
+
+Unpausing resumes protocol operations, which often warrants a higher bar than pausing. Before the `unpause()` transaction is signed, this example requires approval by two users, each with the `unpauser` tag.
+
+<CodeGroup>
+
+```typescript TypeScript
+await client.createPolicy({
+  policyName: "Require 2-of-N to call unpause()",
+  effect: "EFFECT_ALLOW",
+  consensus:
+    "approvers.filter(u, u.tags.contains('unpauser')).count() >= 2",
+  condition:
+    "eth.tx.to == '<contract-address>' && " +
+    "eth.tx.function_name == 'unpause'",
+  notes: "Resuming the contract requires 2 unpauser approvals",
+});
+```
+
+```python Python
+client.create_policy(
+    policy_name="Require 2-of-N to call unpause()",
+    effect="EFFECT_ALLOW",
+    consensus="approvers.filter(u, u.tags.contains('unpauser')).count() >= 2",
+    condition=(
+        "eth.tx.to == '<contract-address>' && "
+        "eth.tx.function_name == 'unpause'"
+    ),
+    notes="Resuming the contract requires 2 unpauser approvals",
+)
+```
+
+</CodeGroup>
+
+<Note>
+If you want pausing and unpausing to be governed the same way, use the same structure for both policies without a `consensus` requirement.
+</Note>
+
+</Step>
+
+<Step title="Call pause()" titleSize="h2">
+
+Use a Turnkey signer to send the `pause()` transaction. Turnkey evaluates the signing request against your policies before producing a signature.
+
+If the signer's user doesn't have the `pauser` tag, Turnkey rejects the signing request before the transaction is broadcast.
+
+<CodeGroup>
+
+```typescript TypeScript
+import { TurnkeySigner } from "@turnkey/ethers";
+import { ethers } from "ethers";
+
+const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
+
+const pauserSigner = new TurnkeySigner({
+  client: turnkey.apiClient(),
+  organizationId: process.env.TURNKEY_ORGANIZATION_ID,
+  signWith: "<pauser-wallet-address>",
+});
+const connectedSigner = pauserSigner.connect(provider);
+
+const contract = new ethers.Contract("<contract-address>", abi, connectedSigner);
+
+const tx = await contract.pause();
+await tx.wait();
+
+console.log("Contract paused. Transaction:", tx.hash);
+```
+
+```python Python
+from web3 import Web3
+from turnkey.web3 import TurnkeyMiddleware
+
+w3 = Web3(Web3.HTTPProvider(os.environ["RPC_URL"]))
+w3.middleware_onion.add(TurnkeyMiddleware(client, sign_with="<pauser-wallet-address>"))
+
+contract = w3.eth.contract(address="<contract-address>", abi=abi)
+
+tx_hash = contract.functions.pause().transact({"from": "<pauser-wallet-address>"})
+receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
+
+print("Contract paused. Transaction:", receipt["transactionHash"].hex())
+```
+
+</CodeGroup>
+
+</Step>
+
+<Step title="Call unpause()" titleSize="h2">
+
+Unpausing follows the same signing pattern, but because the policy requires consensus, the transaction enters a pending state until enough approvers sign off.
+
+<CodeGroup>
+
+```typescript TypeScript
+// Initiator submits the unpause transaction
+const activity = await client.signTransaction({
+  signWith: "<unpauser-wallet-address>",
+  unsignedTransaction: "<unsigned-unpause-tx-payload>",
+  type: "TRANSACTION_TYPE_ETHEREUM",
+});
+
+// activity.status === "ACTIVITY_STATUS_PENDING"
+// A second unpauser-tagged user approves via the dashboard or API:
+await client.approveActivity({
+  fingerprint: activity.fingerprint,
+});
+
+// Once the consensus threshold is met, Turnkey signs the transaction
+```
+
+```python Python
+# Initiator submits the unpause transaction
+activity = client.sign_transaction(
+    sign_with="<unpauser-wallet-address>",
+    unsigned_transaction="<unsigned-unpause-tx-payload>",
+    type="TRANSACTION_TYPE_ETHEREUM",
+)
+
+# activity.status == "ACTIVITY_STATUS_PENDING"
+# A second unpauser-tagged user approves via the dashboard or API:
+client.approve_activity(fingerprint=activity.fingerprint)
+
+# Once the consensus threshold is met, Turnkey signs the transaction
+```
+
+</CodeGroup>
+
+</Step>
+
+</Steps>
+
+## Handle policy rejections
+
+When a signing request is denied, the SDK throws an error with details about the policy that blocked it. You'll want to handle this, and other errors, gracefully:
+
+<CodeGroup>
+
+```typescript TypeScript
+try {
+  const tx = await contract.pause();
+  await tx.wait();
+} catch (error) {
+  if (error.message.includes("OUTCOME_DENY")) {
+    console.error("Signing rejected by policy:", error.message);
+    // Alert on-call, log to your incident tracker, etc.
+  }
+  throw error;
+}
+```
+
+```python Python
+from turnkey.exceptions import PolicyDeniedError
+
+try:
+    tx_hash = contract.functions.pause().transact({"from": "<pauser-wallet-address>"})
+    w3.eth.wait_for_transaction_receipt(tx_hash)
+except PolicyDeniedError as e:
+    print("Signing rejected by policy:", e)
+    # Alert on-call, log to your incident tracker, etc.
+    raise
+```
+</CodeGroup>
