@@ -1,18 +1,18 @@
 ---
-title: "Policy overview"
-description: "Our policy engine is the foundation for flexible controls and permissions within your organization. This page provides an overview of how to author policies."
-sidebarTitle: "Policy Engine"
+# No YAML front matter needed for files only used as snippets.
 ---
 
 ## Policy structure
 
-Our policies are defined using **JSON**. The `effect` determines if an activity should be allowed or denied based on the evaluation of the `consensus` and `condition` fields.
+Our policies are defined in JSON, with these three properties:
 
-`consensus` and `condition` are composed of ergonomic expressions written in our [policy language](/concepts/policies/language) that must evaluate to a `bool`. `consensus` determines which user(s) may take an action (e.g. a given user ID). `condition` determines the conditions under which the policy applies (e.g. signing with a specific wallet). These fields can be used alone or together.
+* `condition` identifies the circumstances under which the policy applies (such as signing with a specific wallet)
+* `consensus` determines which user or users may take an action (for example, a given user ID)
+* `effect` dictates if the activity should be allowed or denied based upon the evaluation of the `consensus` and `condition` fields
 
-#### See below for an example policy that allows a single user to send transactions to a single address
+`consensus` and `condition` are ergonomic expressions written in the Turnkey [policy language](/concepts/policies/language) that must evaluate to a boolean. These fields can be used separately or together.
 
-```json
+```json title="Allow a single user to send transactions to a single address"
 {
   "effect": "EFFECT_ALLOW",
   "consensus": "approvers.any(user, user.id == '4b894565-fa11-42fc-b813-5bf4ea3d53f9')",
@@ -20,29 +20,15 @@ Our policies are defined using **JSON**. The `effect` determines if an activity 
 }
 ```
 
+<Tip>
+Almost all actions on Turnkey are implicitly denied by default. You should design policies that enable those actions required by your integration.
+</Tip>
+
 ## Policy evaluation
 
-All policies defined within an Organization are evaluated on each request. The image below describes how an activity outcome is determined when resolving multiple policies. The rule follows the below steps:
+All policies defined within an Organization are evaluated on each request.
 
-<Steps>
-  <Step>
-    If a quorum of root users takes the action, the final outcome is
-    `OUTCOME_ALLOW`
-  </Step>
-  <Step>
-    Else if any applicable policy has `EFFECT_DENY`, the final outcome is `OUTCOME_DENY`. This is also referred to as "explicit deny."
-  </Step>
-  <Step>
-    Else if at least one applicable policy has `EFFECT_ALLOW`, then the final
-    outcome is `OUTCOME_ALLOW`
-  </Step>
-  <Step>
-    Else the final outcome is `OUTCOME_DENY`. This is also referred to as
-    "implicit deny." In cases of conflicts, `EFFECT_DENY` always wins.
-  </Step>
-</Steps>
-
-Stated differently:
+The image below shows how an action is ultimately allowed or denied based upon the user involved and policy in place (or lack thereof).
 
 <Frame>
   <img
@@ -51,9 +37,29 @@ Stated differently:
   />
 </Frame>
 
-Almost all actions on Turnkey are implicitly denied by default. There are a few exceptions, however:
+Written out:
 
-- The Root Quorum bypasses any policies.
+<Steps>
+  <Step>
+    If a [quorum of root users](/concepts/users/root-quorum) takes the action, the final outcome is
+    `OUTCOME_ALLOW`.
+  </Step>
+  <Step>
+    Else if any applicable policy has `EFFECT_DENY`, the final outcome is `OUTCOME_DENY`. This is also referred to as _explicit deny_. In cases of conflicts, `EFFECT_DENY` always wins.
+  </Step>
+  <Step>
+    Else if at least one applicable policy has `EFFECT_ALLOW`, then the final
+    outcome is `OUTCOME_ALLOW`.
+  </Step>
+  <Step>
+    Else the final outcome is `OUTCOME_DENY`. This is also referred to as
+    _implicit deny_.
+  </Step>
+</Steps>
+
+Almost all actions on Turnkey are implicitly denied by default. There are a few exceptions:
+
+- The [quorum of root users](/concepts/users/root-quorum) bypasses all policies.
 - All users have implicit GET (read) permissions in their own Organization and any associated Sub-Organizations.
 - All users have implicit permission to change their own credentials, unless a policy explicitly allows or denies those actions.
-- All users have implicit permission to approve an activity if they were included in consensus (i.e., a user specified as part of the consensus required to approve a SIGN_TRANSACTION activity does not need separate, explicit permission to sign transactions).
+- All users have implicit permission to approve an activity if the users are included in consensus. For example, a user specified as part of the consensus required to approve a `SIGN_TRANSACTION` activity does not need separate, explicit permission to sign transactions.
