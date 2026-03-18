@@ -1,0 +1,86 @@
+---
+title: "Creating wallets"
+description: "Provision a wallet for a new user — creating a sub-organization, deriving accounts, and fetching addresses."
+---
+
+Each end user gets a dedicated sub-organization with their own wallet. You create both in a single API call, so there's no second round-trip to provision addresses.
+
+## Create a sub-organization with a wallet
+
+The `createSubOrganization` activity accepts an optional `wallet` block. When included, Turnkey provisions the wallet and derives account addresses atomically with the sub-org creation.
+
+```typescript
+const client = turnkey.apiClient();
+
+const { subOrganizationId, wallet } = await client.createSubOrganization({
+  organizationId: process.env.TURNKEY_ORG_ID!,
+  subOrganizationName: `user:${userEmail}`,
+  rootUsers: [{
+    userName: userEmail,
+    apiKeys: [],
+    authenticators: [{
+      authenticatorName: "Passkey",
+      challenge: attestation.challenge,
+      attestation: attestation,
+    }],
+  }],
+  rootQuorumThreshold: 1,
+  wallet: {
+    walletName: "Default Wallet",
+    accounts: [{
+      curve: "CURVE_SECP256K1",
+      pathFormat: "PATH_FORMAT_BIP32",
+      path: "m/44'/60'/0'/0/0",
+      addressFormat: "ADDRESS_FORMAT_ETHEREUM",
+    }],
+  },
+});
+```
+
+Persist `subOrganizationId` to your user record — you'll need it for all future operations on behalf of this user.
+
+## Fetch wallet addresses
+
+After creation, retrieve addresses to display in your UI or pass to smart contracts.
+
+```typescript
+const { accounts } = await client.getWalletAccounts({
+  organizationId: user.turnkeySubOrgId,
+  walletId: wallet.walletId,
+});
+
+const ethAddress = accounts[0].address;
+// → "0xabc123..."
+```
+
+## Add accounts to an existing wallet
+
+To add additional chains or derivation paths to an existing wallet:
+
+```typescript
+await client.createWalletAccounts({
+  organizationId: user.turnkeySubOrgId,
+  walletId: wallet.walletId,
+  accounts: [{
+    curve: "CURVE_ED25519",
+    pathFormat: "PATH_FORMAT_BIP32",
+    path: "m/44'/501'/0'/0'",
+    addressFormat: "ADDRESS_FORMAT_SOLANA",
+  }],
+});
+```
+
+<Tip>
+  A single wallet can hold accounts across multiple chains. You don't need to create separate wallets per network — add accounts with different `addressFormat` values to the same wallet.
+</Tip>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Multi-chain support" icon="link" href="/products/embedded-wallets/features/multi-chain-support">
+    See all supported address formats and networks.
+  </Card>
+  <Card title="Signing transactions" icon="pen" href="/embed-wallets/signing-transactions">
+    Sign and broadcast transactions with the user's wallet.
+  </Card>
+</CardGroup>

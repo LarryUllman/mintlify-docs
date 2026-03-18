@@ -1,11 +1,187 @@
 ---
-title: "Embedded wallets quickstart"
-description: "Turnkey's embedded wallets enable you to integrate secure, custom wallet experiences directly into your product. With features like advanced security, seamless authentication, and flexible UX options, you can focus on building great products while we handle the complexities of private key management."
+title: "Create an embedded wallet"
+description: "Walk through creating a non-custodial embedded wallet for a consumer app user, from sub-organization setup to signing a transaction."
 sidebarTitle: "Embedded wallets"
 ---
 
-## `@turnkey/react-wallet-kit`
+<Callout icon="🎯">
+**Goal:** By the end of this guide, you'll have a working embedded wallet tied to a user identity, secured by a passkey, and able to sign transactions — without the user ever seeing a seed phrase.
+</Callout>
 
-The `@turnkey/react-wallet-kit` is a powerful SDK that allows you to integrate Turnkey's Embedded Wallets into your React applications. It provides a set of UI components and easy-to-use functions, all exported from a hook, enabling you to quickly build secure embedded wallet experiences.
+## How it works
 
-Head over to the [Getting Started](/sdks/react/getting-started) guide to set up your React app with Turnkey's Embedded Wallets.
+Turnkey embedded wallets are built on **sub-organizations** — isolated Turnkey orgs scoped to a single end user. Your app's root organization acts as the parent; each user gets their own child org with their own wallet and credentials.
+
+<Frame>
+  <img src="/images/embedded-wallets/sub-org-diagram.png" alt="Sub-org architecture" />
+</Frame>
+
+Each sub-org is controlled by the user's **passkey** (or email OTP), so only they can authorize transactions — your backend never touches their private key.
+
+## Prerequisites
+
+- A Turnkey account with an API key ([set one up here](/getting-started/quickstart))
+- Node.js 18+ and a React app (Next.js works great)
+- `@turnkey/sdk-browser` and `@turnkey/sdk-server` installed
+
+```bash
+npm install @turnkey/sdk-browser @turnkey/sdk-server
+```
+
+## Steps
+
+<Steps>
+  <Step title="Initialize the Turnkey client">
+    Set up the browser and server SDK clients. The browser client handles passkey signing; the server client handles privileged operations like creating sub-orgs.
+
+    <CodeGroup>
+    ```typescript Browser (React)
+    import { TurnkeyClient } from "@turnkey/sdk-browser";
+
+    export const turnkey = new TurnkeyClient({
+      apiBaseUrl: "https://api.turnkey.com",
+      defaultOrganizationId: process.env.NEXT_PUBLIC_TURNKEY_ORG_ID!,
+    });
+    ```
+
+    ```typescript Server (Next.js API route)
+    import { Turnkey } from "@turnkey/sdk-server";
+
+    const turnkey = new Turnkey({
+      apiBaseUrl: "https://api.turnkey.com",
+      apiPrivateKey: process.env.TURNKEY_API_PRIVATE_KEY!,
+      apiPublicKey: process.env.TURNKEY_API_PUBLIC_KEY!,
+      defaultOrganizationId: process.env.TURNKEY_ORG_ID!,
+    });
+    ```
+    </CodeGroup>
+
+    <Tip>
+    Store your root org credentials only on the server. The browser client authenticates via passkey — no API key needed client-side.
+    </Tip>
+  </Step>
+
+  <Step title="Register a passkey and create a sub-organization">
+    When a new user signs up, register their passkey and create a sub-org in one flow. This is a server-side privileged operation triggered by your onboarding API route.
+
+    <AccordionGroup>
+      <Accordion title="1a. Prompt the user to create a passkey">
+        ```typescript
+        // Browser: generate a passkey attestation
+        import { PasskeyStamper } from "@turnkey/sdk-browser";
+
+        const stamper = new PasskeyStamper({ rpId: "yourdomain.com" });
+        const attestation = await stamper.createCredential({
+          publicKey: {
+            rp: { name: "Your App" },
+            user: {
+              id: crypto.getRandomValues(new Uint8Array(16)),
+              name: userEmail,
+              displayName: userEmail,
+            },
+          },
+        });
+        ```
+      </Accordion>
+
+      <Accordion title="1b. Create the sub-org on your server">
+        Pass the attestation to your server, which calls Turnkey to create the sub-org with the user's passkey as the root authenticator.
+
+        ```typescript
+        // Server: POST /api/create-wallet
+        const client = turnkey.apiClient();
+
+        const { subOrganizationId } = await client.createSubOrganization({
+          organizationId: process.env.TURNKEY_ORG_ID!,
+          subOrganizationName: `user:${userEmail}`,
+          rootUsers: [{
+            userName: userEmail,
+            apiKeys: [],
+            authenticators: [{
+              authenticatorName: "Passkey",
+              challenge: attestation.challenge,
+              attestation: attestation,
+            }],
+          }],
+          rootQuorumThreshold: 1,
+          wallet: {
+            walletName: "Default Wallet",
+            accounts: [{
+              curve: "CURVE_SECP256K1",
+              pathFormat: "PATH_FORMAT_BIP32",
+              path: "m/44'/60'/0'/0/0",
+              addressFormat: "ADDRESS_FORMAT_ETHEREUM",
+            }],
+          },
+        });
+
+        // Persist subOrganizationId to your user record
+        await db.users.update({ email: userEmail }, { turnkeySubOrgId: subOrganizationId });
+        ```
+      </Accordion>
+    </AccordionGroup>
+
+    The `wallet` block in `createSubOrganization` provisions a default Ethereum address automatically — no second round-trip needed.
+  </Step>
+
+  <Step title="Fetch the user's wallet address">
+    After sub-org creation, retrieve the wallet address to display in your UI or pass to smart contracts.
+
+    ```typescript
+    // Server: fetch wallet accounts for a user's sub-org
+    const { accounts } = await client.getWalletAccounts({
+      organizationId: user.turnkeySubOrgId,
+      walletId: walletId, // returned from createSubOrganization
+    });
+
+    const ethAddress = accounts[0].address;
+    // → "0xabc123..."
+    ```
+  </Step>
+
+  <Step title="Sign a transaction">
+    Transaction signing happens in the browser — the user's passkey approves it directly. Your server never sees the private key.
+
+    ```typescript
+    // Browser: sign with the user's passkey
+    import { TurnkeyClient, PasskeyStamper } from "@turnkey/sdk-browser";
+
+    const stamper = new PasskeyStamper({ rpId: "yourdomain.com" });
+    const client = new TurnkeyClient({ apiBaseUrl: "https://api.turnkey.com" }, stamper);
+
+    const { signedTransaction } = await client.signTransaction({
+      type: "ACTIVITY_TYPE_SIGN_TRANSACTION_V2",
+      organizationId: user.turnkeySubOrgId,
+      parameters: {
+        signWith: ethAddress,
+        unsignedTransaction: serializedTx, // hex-encoded RLP
+        type: "TRANSACTION_TYPE_ETHEREUM",
+      },
+    });
+
+    // Broadcast via your RPC provider
+    await provider.broadcastTransaction(signedTransaction);
+    ```
+
+    <Info>
+    The passkey prompt appears automatically when `signTransaction` is called. No additional UI code needed.
+    </Info>
+  </Step>
+</Steps>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Add email recovery" icon="envelope" href="/products/embedded-wallets/features/email-recovery">
+    Let users recover access if they lose their passkey device.
+  </Card>
+  <Card title="Sponsor gas fees" icon="gas-pump" href="/products/embedded-wallets/features/gas-sponsorship">
+    Abstract away gas so users never need to hold ETH.
+  </Card>
+  <Card title="Policy engine" icon="shield-check" href="/concepts/policies/overview">
+    Set spend limits and transaction rules at the sub-org level.
+  </Card>
+  <Card title="Multi-chain support" icon="link" href="/products/embedded-wallets/features/multi-chain-support">
+    Add Solana, Bitcoin, and other address formats to the same wallet.
+  </Card>
+</CardGroup>

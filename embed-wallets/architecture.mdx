@@ -1,0 +1,45 @@
+---
+title: "Architecture"
+description: "How sub-organizations map to end users, and how Turnkey isolates key material between them."
+---
+
+Turnkey embedded wallets are built on **sub-organizations** — isolated Turnkey orgs scoped to a single end user. Your app's root organization acts as the parent; each user gets their own child org with their own wallet and credentials.
+
+Using Turnkey's flexible infrastructure, you can programmatically create and manage sub-organizations for your end-users. Sub-organizations aren't subject to size limits: you can create as many sub-organizations as needed. The parent organization has **read-only** visibility into all of its sub-organizations, and activities performed in sub-organizations roll up to the parent for billing purposes.
+
+## Creating sub-organizations
+
+Creating a new sub-organization is an activity performed by the parent organization. The activity itself takes the following attributes as inputs:
+
+- Organization name
+- A list of root users
+- A root quorum threshold
+- \[optional] A wallet (with one or more accounts)
+
+Root users can be programmatic or human, with one or many credentials attached.
+
+## Key isolation
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Each sub-organization's private keys are isolated from the parent and from other sub-organizations. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+
+## Parent org visibility
+
+The parent organization has read-only access to all sub-organizations. This means your backend can:
+
+- List wallets and addresses across all users
+- Audit activity logs
+- Initiate recovery flows on behalf of users
+
+It cannot sign transactions or modify credentials without the sub-org user's participation.
+
+## Deleting sub-organizations
+
+To delete a sub-organization, use the [delete sub-organization activity](/api-reference/activities/delete-sub-organization).
+Before proceeding, ensure that all private keys and wallets within the sub-organization have been exported to prevent any loss of funds.
+Alternatively, set the `deleteWithoutExport` parameter to `true` to bypass this requirement.
+
+<Note>
+  This activity must be initiated by a root user in the sub-organization that is
+  to be deleted. A parent org cannot delete a sub-organization without its
+  participation.
+</Note>

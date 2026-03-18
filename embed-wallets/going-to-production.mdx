@@ -1,0 +1,42 @@
+---
+title: "Going to production"
+description: "Security checklist, edge cases, and how to test passkey flows before launch."
+---
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip.
+
+## Security checklist
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit:
+
+- [ ] Root org API keys are stored server-side only — never exposed to the browser
+- [ ] Sub-org IDs are scoped per user — users cannot access each other's sub-orgs
+- [ ] Recovery flows are protected by rate limiting and audit logging
+- [ ] Policies are configured to restrict signing to expected transaction types
+- [ ] Admin-initiated recovery requires explicit policy approval
+
+## Rate limits and quotas
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident.
+
+See [resource limits](/concepts/resource-limits) for current limits on sub-organizations, wallets, and API calls.
+
+## Handling edge cases
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sunt in culpa qui officia deserunt mollit anim id est laborum. Sed ut perspiciatis unde omnis iste natus error:
+
+- **Duplicate users**: Check if a sub-org already exists for an email before calling `createSubOrganization`
+- **Failed sub-org creation**: Creation is atomic — if it fails, no partial state is left; retry safely
+- **Passkey not available**: Fall back to email OTP and prompt the user to register a passkey after login
+
+## Testing passkey flows locally
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit.
+
+<Tip>
+  Chrome and Safari support passkeys on localhost. Set your `rpId` to `localhost` during development. You'll need an HTTPS origin for production.
+</Tip>
+
+## Going live
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit.

@@ -1,0 +1,123 @@
+---
+title: "Signing transactions"
+description: "Browser-side transaction signing with passkeys — your server never touches private keys."
+---
+
+import SigningTransactions from "/embedded-wallets/code-examples/signing-transactions.mdx";
+
+Transaction signing in Turnkey embedded wallets happens entirely in the browser. The user's passkey approves each signing request — your backend is never involved in the signing operation.
+
+## How it works
+
+1. Your app constructs an unsigned transaction
+2. The browser SDK sends a signing request to Turnkey, stamped with the user's passkey
+3. The user approves via their device's biometric or PIN prompt
+4. Turnkey returns the signed transaction
+5. Your app broadcasts it via an RPC provider
+
+<Info>
+  The passkey approval prompt appears automatically when the signing request is submitted. No additional UI code is required.
+</Info>
+
+## React SDK
+
+The simplest path is using `@turnkey/sdk-react`, which manages the passkey client and session state for you.
+
+<Steps>
+  <Step title="Initialize the React Provider">
+    ```js
+    import { TurnkeyProvider } from "@turnkey/sdk-react";
+
+    const turnkeyConfig = {
+      apiBaseUrl: "https://api.turnkey.com",
+      defaultOrganizationId: process.env.TURNKEY_ORGANIZATION_ID,
+      rpId: process.env.RPID, // your application's domain
+      iframeUrl: "https://auth.turnkey.com",
+    };
+
+    <TurnkeyProvider config={turnkeyConfig}>
+      {/* rest of app */}
+    </TurnkeyProvider>
+    ```
+  </Step>
+
+  <Step title="Initialize an Ethers signer with the passkey client">
+    ```js
+    import { ethers } from "ethers";
+    import { TurnkeySigner } from "@turnkey/ethers";
+    import { useTurnkey } from "@turnkey/sdk-react";
+
+    const { turnkey, passkeyClient } = useTurnkey();
+    const provider = new ethers.JsonRpcProvider("<RPC URL>");
+    const currentUser = await turnkey.getCurrentUser();
+
+    const turnkeySigner = new TurnkeySigner({
+      client: passkeyClient,
+      organizationId: currentUser.organization.organizationId,
+      signWith: "<wallet address>",
+    });
+
+    const connectedSigner = turnkeySigner.connect(provider);
+    ```
+  </Step>
+
+  <Step title="Send a transaction">
+    ```js
+    const tx = await connectedSigner.sendTransaction({
+      to: "<destination address>",
+      value: ethers.parseEther("<amount>"),
+      type: 2,
+    });
+    ```
+  </Step>
+</Steps>
+
+## Without React
+
+For non-React apps, initialize the passkey client directly from `@turnkey/sdk-browser`.
+
+<Steps>
+  <Step title="Initialize the passkey client">
+    ```js
+    import { Turnkey } from "@turnkey/sdk-browser";
+
+    const turnkey = new Turnkey({
+      apiBaseUrl: "https://api.turnkey.com",
+      defaultOrganizationId: process.env.TURNKEY_ORGANIZATION_ID,
+    });
+    const passkeyClient = turnkey.passkeyClient();
+    ```
+  </Step>
+
+  <Step title="Initialize an Ethers signer">
+    ```js
+    import { ethers } from "ethers";
+    import { TurnkeySigner } from "@turnkey/ethers";
+
+    const provider = new ethers.JsonRpcProvider("<RPC URL>");
+    const currentUser = await turnkey.getCurrentUser();
+
+    const turnkeySigner = new TurnkeySigner({
+      client: passkeyClient,
+      organizationId: currentUser.organization.organizationId,
+      signWith: "<wallet address>",
+    });
+
+    const connectedSigner = turnkeySigner.connect(provider);
+    ```
+  </Step>
+
+  <Step title="Send a transaction">
+    ```js
+    const tx = await connectedSigner.sendTransaction({
+      to: "<destination address>",
+      value: ethers.parseEther("<amount>"),
+      type: 2,
+    });
+    ```
+  </Step>
+</Steps>
+
+## Other signers
+
+Turnkey integrates with Viem, Solana web3.js, and other Web3 libraries. See the [Web3 libraries](/category/web3-libraries) section for drop-in signer packages.

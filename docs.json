@@ -80,6 +80,21 @@
               "smart-contracts/pause-contracts",
               "smart-contracts/upgrade-contracts"
             ]
+          },
+          {
+            "group": "Embed wallets",
+            "expanded": false,
+            "pages": [
+              "embed-wallets/overview",
+              "embed-wallets/architecture",
+              "embed-wallets/authentication",
+              "embed-wallets/creating-wallets",
+              "embed-wallets/signing-transactions",
+              "embed-wallets/session-management",
+              "embed-wallets/recovery",
+              "embed-wallets/customizing-the-ux",
+              "embed-wallets/going-to-production"
+            ]
           }
         ]
       },

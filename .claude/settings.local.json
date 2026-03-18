@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(mintlify dev:*)"
+      "Bash(mintlify dev:*)",
+      "Bash(wc:*)"
     ]
   }
 }
