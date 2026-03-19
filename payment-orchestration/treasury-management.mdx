@@ -1,0 +1,58 @@
+---
+title: "Treasury management"
+description: "Structure multiple company wallets for different purposes, and use sub-organizations for business-unit or customer isolation."
+---
+
+How you structure your wallets will shape how scalable and maintainable your payment setup is. Turnkey supports several patterns — choose the one that fits your operational model.
+
+## Wallet structure options
+
+**Option 1: Single wallet with many accounts (HD path fan-out)**
+
+By default, Turnkey wallets use a hierarchical deterministic (HD) structure. You can generate unlimited accounts from a single wallet seed, each with its own address. This is ideal for:
+
+- Managing multiple deposit addresses
+- Assigning different on-chain roles (e.g. one account for payouts, another for fee collection)
+- Keeping treasury logic simple with one wallet and one policy
+
+This approach scales well: one wallet, one policy, multiple accounts.
+
+**Option 2: Multiple wallets in a single org**
+
+Use this when you need separation by use case. For example:
+
+- One wallet for operational payouts
+- One wallet for treasury reserves
+- One wallet for gas/fee management
+
+Policies can be set at the wallet level to enforce clear boundaries — e.g. only certain API keys can touch the reserve wallet.
+
+<Note>
+Check Turnkey's [resource limits](/concepts/resource-limits) to ensure your intended wallet structure fits within org limits.
+</Note>
+
+**Option 3: Sub-organizations per business unit or customer**
+
+This option provides the strictest isolation — each sub-org has its own root users and policy namespace. Best for multi-tenant environments or wallets with different authentication requirements. Downside: more setup, more operational overhead.
+
+Most teams use a combination: multiple accounts under a few wallets for day-to-day operations, with sub-orgs reserved for high-risk or user-facing cases.
+
+## Common treasury patterns
+
+| Pattern | Wallets | Use case |
+| ------- | ------- | -------- |
+| Hot wallet + cold reserve | 2 wallets | Separate frequently-used operational funds from long-term reserves |
+| Sweep wallet | 1 wallet | Collect funds from many deposit addresses into a single treasury account |
+| Per-chain wallets | 1 per network | Keep ETH, Solana, and Bitcoin funds cleanly separated |
+| Fee wallet | 1 wallet | Dedicated gas/fee source, separate from payment funds |
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Payment policies" icon="shield-check" href="/payment-orchestration/payment-policies">
+    Set spend limits and access controls per wallet.
+  </Card>
+  <Card title="Payouts at scale" icon="bolt-lightning" href="/payment-orchestration/payouts-at-scale">
+    High-throughput disbursement patterns.
+  </Card>
+</CardGroup>

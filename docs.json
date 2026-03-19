@@ -30,6 +30,7 @@
               "home",
               "getting-started/signing-automation-quickstart",
               "getting-started/embedded-wallet-quickstart",
+              "getting-started/payment-orchestration-quickstart",
               "getting-started/cookbook"
             ]
           },
@@ -94,6 +95,22 @@
               "embed-wallets/recovery",
               "embed-wallets/customizing-the-ux",
               "embed-wallets/going-to-production"
+            ]
+          },
+          {
+            "group": "Orchestrate payments",
+            "expanded": false,
+            "pages": [
+              "payment-orchestration/overview",
+              "payment-orchestration/architecture",
+              "payment-orchestration/company-wallets",
+              "payment-orchestration/treasury-management",
+              "payment-orchestration/payment-policies",
+              "payment-orchestration/signing-payments",
+              "payment-orchestration/payouts-at-scale",
+              "payment-orchestration/stablecoins-and-tokens",
+              "payment-orchestration/monitoring-and-reconciliation",
+              "payment-orchestration/going-to-production"
             ]
           }
         ]

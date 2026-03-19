@@ -1,0 +1,39 @@
+---
+title: "Stablecoins and tokens"
+description: "Send USDC, USDT, and other ERC-20 tokens, as well as SPL tokens on Solana."
+---
+
+import NetworkLinks from "/snippets/shared/networks-links.mdx";
+
+Turnkey supports signing transactions across all major networks and asset types. The signing flow is identical regardless of asset — Turnkey signs the raw transaction; your application is responsible for constructing the correct calldata for token transfers.
+
+## ERC-20 tokens (Ethereum, Base, Polygon, etc.)
+
+Sending an ERC-20 token (e.g. USDC) requires encoding a `transfer(address,uint256)` call into the transaction's `data` field. Use an ethers.js or viem contract interface to construct this:
+
+```ts
+import { ethers } from "ethers";
+import { TurnkeySigner } from "@turnkey/ethers";
+
+const ERC20_ABI = ["function transfer(address to, uint256 amount)"];
+const usdcContract = new ethers.Contract(
+  "<USDC_CONTRACT_ADDRESS>",
+  ERC20_ABI,
+  connectedSigner
+);
+
+const tx = await usdcContract.transfer(
+  "<RECIPIENT_ADDRESS>",
+  ethers.parseUnits("100", 6) // 100 USDC (6 decimals)
+);
+
+console.log("USDC transfer sent:", tx.hash);
+```
+
+## SPL tokens (Solana)
+
+lorem
+
+## Supported networks
+
+<NetworkLinks />

@@ -1,0 +1,44 @@
+---
+title: "Going to production"
+description: "Security checklist, API key hardening, and incident response for payment orchestration."
+---
+
+## Security checklist
+
+- [ ] API private keys are stored server-side only — never exposed to the browser or client
+- [ ] Policies restrict signing to known recipient addresses (allowlist)
+- [ ] Per-transaction spend limits are configured
+- [ ] High-value transactions require co-signer approval (quorum policy)
+- [ ] API keys are scoped with the minimum permissions needed
+- [ ] Root quorum credentials are stored offline or in a hardware security module
+- [ ] Activity logs are exported to your own storage for long-term audit retention
+- [ ] Incident response runbook is documented and tested
+
+## Policy hardening
+
+Policies are your primary safety net. Every signing request is denied by default — policies define what's allowed.
+
+For payment workflows, start with the tightest possible policies and expand as needed:
+
+- Restrict `eth.tx.to` to an allowlist of known recipient addresses
+- Cap `eth.tx.value` to a per-transaction maximum
+- Require quorum approval for transactions above a threshold
+- Use separate API keys for different wallet roles (e.g. payout wallet vs. treasury)
+
+See [payment policies](/payment-orchestration/payment-policies) for implementation details.
+
+## API key rotation
+
+lorem
+
+## Rate limits and quotas
+
+See [resource limits](/concepts/resource-limits) for current limits on wallets, API calls, and activities per organization.
+
+## Incident response
+
+lorem
+
+## Going live
+
+lorem

@@ -1,0 +1,271 @@
+---
+title: "Payment orchestration quickstart"
+description: "Set up a company wallet and sign your first programmatic payment in under 30 minutes."
+sidebarTitle: "Payment orchestration"
+---
+
+<Callout icon="🎯">
+**Goal:** By the end of this guide, your backend will be able to sign and send payments from a company-controlled wallet — no manual approvals, no browser required.
+</Callout>
+
+<Steps>
+
+  <Step title="Set up your environment" titleSize="h2">
+    <AccordionGroup>
+      <Accordion title="Create your account" defaultOpen="true" icon="id-badge" iconType="duotone">
+
+        Navigate to the [Turnkey Dashboard](https://app.turnkey.com/dashboard/auth/initial) to create an account and set up your organization.
+
+        Once logged in, open the user dropdown at the top right. Your Organization ID is listed there. Copy it for later.
+
+        <Frame>
+          <img src="/images/getting-started/img/quickstart/org-id.png" />
+        </Frame>
+
+      </Accordion>
+
+      <Accordion title="Install the CLI" icon="terminal" iconType="duotone">
+
+        Install the Turnkey CLI:
+
+        ```bash
+        brew install tkhq/tap/turnkey
+        ```
+
+        <Tip>For a more secure installation that avoids trusting external parties (here, Homebrew), see the [CLI repository](https://github.com/tkhq/tkcli).</Tip>
+
+      </Accordion>
+
+      <Accordion title="Install your preferred SDK" icon="code" iconType="duotone">
+
+        <CodeGroup>
+
+          ```bash JavaScript
+          npm install @turnkey/sdk-server
+          ```
+
+          ```bash Python
+          pip install turnkey-http turnkey-api-key-stamper
+          ```
+
+        </CodeGroup>
+
+      </Accordion>
+
+      <Accordion title="Store your Organization ID" icon="building" iconType="duotone">
+
+        ```bash
+        export ORGANIZATION_ID=<YOUR_ORGANIZATION_ID>
+        ```
+
+      </Accordion>
+
+      <Accordion title="Generate an API key" icon="key" iconType="duotone">
+
+        Payment orchestration is a server-side operation. Create an API key your backend will use to authenticate signing requests:
+
+        ```bash wrap
+        turnkey generate api-key --organization $ORGANIZATION_ID --key-name payments-service
+        ```
+
+        You'll see output like:
+
+        ```json
+        {
+          "privateKeyFile": "/home/user/.config/turnkey/keys/payments-service.private",
+          "publicKey": "03...72",
+          "publicKeyFile": "/home/user/.config/turnkey/keys/payments-service.public"
+        }
+        ```
+
+        Store the private key file path in your environment:
+
+        ```bash
+        export TK_API_KEY_NAME=payments-service
+        ```
+
+        <Warning>
+          Keep this private key secure. It authorizes signing on behalf of your organization. Never commit it to source control or expose it client-side.
+        </Warning>
+
+      </Accordion>
+    </AccordionGroup>
+  </Step>
+
+  <Step title="Create a company wallet" titleSize="h2">
+    <AccordionGroup>
+      <Accordion title="Create the wallet" defaultOpen="true" icon="wallet" iconType="duotone">
+
+        Create a wallet to hold your company's funds. Unlike embedded wallets (which are per-user sub-organizations), this wallet lives directly in your root organization and is controlled by your backend API key.
+
+        <CodeGroup>
+
+          ```bash CLI
+          turnkey wallets create --name company-treasury --key-name $TK_API_KEY_NAME
+          ```
+
+          ```typescript JavaScript
+          import { Turnkey } from "@turnkey/sdk-server";
+
+          const turnkey = new Turnkey({
+            apiBaseUrl: "https://api.turnkey.com",
+            apiPrivateKey: process.env.TURNKEY_API_PRIVATE_KEY!,
+            apiPublicKey: process.env.TURNKEY_API_PUBLIC_KEY!,
+            defaultOrganizationId: process.env.TURNKEY_ORG_ID!,
+          });
+
+          const client = turnkey.apiClient();
+
+          const { walletId } = await client.createWallet({
+            walletName: "company-treasury",
+            accounts: [],
+          });
+          ```
+
+        </CodeGroup>
+
+      </Accordion>
+
+      <Accordion title="Generate a payment address" icon="ethereum" iconType="duotone">
+
+        Add an Ethereum account to the wallet. This is the address your payment transactions will be sent from.
+
+        <CodeGroup>
+
+          ```bash CLI
+          turnkey wallets accounts create \
+            --wallet company-treasury \
+            --address-format ADDRESS_FORMAT_ETHEREUM \
+            --key-name $TK_API_KEY_NAME
+          ```
+
+          ```typescript JavaScript
+          const { accounts } = await client.createWalletAccounts({
+            walletId: walletId,
+            accounts: [{
+              curve: "CURVE_SECP256K1",
+              pathFormat: "PATH_FORMAT_BIP32",
+              path: "m/44'/60'/0'/0/0",
+              addressFormat: "ADDRESS_FORMAT_ETHEREUM",
+            }],
+          });
+
+          const paymentAddress = accounts[0].address;
+          // → "0xabc123..."
+          ```
+
+        </CodeGroup>
+
+        Fund this address with ETH or USDC before sending your first payment.
+
+      </Accordion>
+    </AccordionGroup>
+  </Step>
+
+  <Step title="Set payment policies" titleSize="h2">
+
+    Policies control what your API key can sign. For a payment workflow, set an allowlist of approved recipient addresses so a compromised API key can't drain funds to arbitrary destinations.
+
+    <CodeGroup>
+
+      ```bash CLI
+      turnkey request --path /public/v1/submit/create_policy --body '{
+        "timestampMs": "'"$(date +%s)"'000",
+        "type": "ACTIVITY_TYPE_CREATE_POLICY_V3",
+        "organizationId": "'"$ORGANIZATION_ID"'",
+        "parameters": {
+          "policyName": "Approved payment recipients",
+          "effect": "EFFECT_ALLOW",
+          "consensus": "approvers.any(user, user.id == '"'"'<YOUR_API_KEY_USER_ID>'"'"')",
+          "condition": "eth.tx.to == '"'"'<RECIPIENT_ADDRESS>'"'"'"
+        }
+      }' --key-name $TK_API_KEY_NAME
+      ```
+
+      ```typescript JavaScript
+      await client.createPolicy({
+        policyName: "Approved payment recipients",
+        effect: "EFFECT_ALLOW",
+        consensus: `approvers.any(user, user.id == '<YOUR_API_KEY_USER_ID>')`,
+        condition: `eth.tx.to == '<RECIPIENT_ADDRESS>'`,
+      });
+      ```
+
+    </CodeGroup>
+
+    <Tip>
+      To allowlist multiple recipients, combine conditions with `||`: `eth.tx.to == '<ADDR_1>' || eth.tx.to == '<ADDR_2>'`. See the [policy language reference](/concepts/policies/overview) for the full syntax.
+    </Tip>
+
+  </Step>
+
+  <Step title="Sign and send a payment" titleSize="h2">
+
+    With a wallet funded and policies in place, your backend can now sign payment transactions without any manual approval step.
+
+    Construct the unsigned transaction, sign it with Turnkey, and broadcast it via your RPC provider.
+
+    <CodeGroup>
+
+      ```bash CLI
+      turnkey request --path /public/v1/submit/sign_transaction --body '{
+        "timestampMs": "'"$(date +%s)"'000",
+        "type": "ACTIVITY_TYPE_SIGN_TRANSACTION_V2",
+        "organizationId": "'"$ORGANIZATION_ID"'",
+        "parameters": {
+          "type": "TRANSACTION_TYPE_ETHEREUM",
+          "signWith": "<YOUR_PAYMENT_ADDRESS>",
+          "unsignedTransaction": "<HEX_ENCODED_UNSIGNED_TX>"
+        }
+      }' --key-name $TK_API_KEY_NAME
+      ```
+
+      ```typescript JavaScript
+      import { ethers } from "ethers";
+      import { TurnkeySigner } from "@turnkey/ethers";
+
+      const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
+
+      const signer = new TurnkeySigner({
+        client,
+        organizationId: process.env.TURNKEY_ORG_ID!,
+        signWith: paymentAddress,
+      });
+
+      const connectedSigner = signer.connect(provider);
+
+      const tx = await connectedSigner.sendTransaction({
+        to: "<RECIPIENT_ADDRESS>",
+        value: ethers.parseUnits("100", 6), // 100 USDC
+        type: 2,
+      });
+
+      console.log("Payment sent:", tx.hash);
+      ```
+
+    </CodeGroup>
+
+    <Tip>
+      Need a quick unsigned transaction for testing? Use Turnkey's [simple transaction generator](https://build.tx.xyz), then broadcast the result on [Etherscan](https://etherscan.io/pushTx).
+    </Tip>
+
+  </Step>
+
+</Steps>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Automate transactions" icon="robot" href="/signing-automation/automate-transactions-overview">
+    Learn how to build reliable, high-throughput signing pipelines.
+  </Card>
+  <Card title="Policy engine" icon="shield-check" href="/concepts/policies/overview">
+    Set spend limits, co-signing requirements, and allowlists for production.
+  </Card>
+  <Card title="Observe and audit" icon="eye" href="/signing-automation/observe-and-audit">
+    Monitor payment activity and export audit logs.
+  </Card>
+  <Card title="Multi-chain support" icon="link" href="/products/embedded-wallets/features/multi-chain-support">
+    Send payments on Solana, Bitcoin, and other networks.
+  </Card>
+</CardGroup>

@@ -1,0 +1,116 @@
+---
+title: "Company wallets"
+description: "Create and manage wallets for your organization's funds. Unlike embedded wallets, company wallets live in your root org and are controlled by backend API keys."
+---
+
+Before you can sign payments, you need a wallet. Turnkey uses [hierarchical deterministic (HD) wallets](/concepts/wallets) that can derive millions of addresses across multiple blockchains from a single seed.
+
+Unlike [embedded wallets](/embed-wallets/overview) — which are scoped to individual end users in sub-organizations — company wallets live directly in your root organization and are signed by backend API keys. No browser, no user interaction required.
+
+## Create a company wallet
+
+<Tabs>
+<Tab title="TypeScript">
+```ts
+import { Turnkey } from "@turnkey/sdk-server";
+
+const turnkey = new Turnkey({
+  apiBaseUrl: "https://api.turnkey.com",
+  defaultOrganizationId: process.env.TURNKEY_ORGANIZATION_ID,
+  apiPrivateKey: process.env.TURNKEY_API_PRIVATE_KEY,
+  apiPublicKey: process.env.TURNKEY_API_PUBLIC_KEY,
+});
+
+const client = turnkey.apiClient();
+
+const wallet = await client.createWallet({
+  walletName: "company-treasury",
+  accounts: [
+    {
+      curve: "CURVE_SECP256K1",
+      pathFormat: "PATH_FORMAT_BIP32",
+      path: "m/44'/60'/0'/0/0",
+      addressFormat: "ADDRESS_FORMAT_ETHEREUM",
+    },
+  ],
+});
+
+console.log("Wallet ID:", wallet.walletId);
+console.log("Payment address:", wallet.addresses[0]);
+```
+</Tab>
+<Tab title="CLI">
+```bash
+turnkey wallets create \
+  --name "company-treasury" \
+  --accounts '[{
+    "curve": "CURVE_SECP256K1",
+    "pathFormat": "PATH_FORMAT_BIP32",
+    "path": "m/44'\''/60'\''/0'\''/0/0",
+    "addressFormat": "ADDRESS_FORMAT_ETHEREUM"
+  }]'
+```
+</Tab>
+</Tabs>
+
+## Derive additional payment addresses
+
+After creating a wallet, you can derive additional accounts on different networks from the same seed.
+
+```ts
+const accounts = await client.createWalletAccounts({
+  walletId: wallet.walletId,
+  accounts: [
+    {
+      curve: "CURVE_ED25519",
+      pathFormat: "PATH_FORMAT_BIP32",
+      path: "m/44'/501'/0'/0'",
+      addressFormat: "ADDRESS_FORMAT_SOLANA",
+    },
+  ],
+});
+
+console.log("Solana address:", accounts.addresses[0]);
+```
+
+## Common account configurations
+
+| Network  | Curve             | Address Format              | Default Path           |
+| -------- | ----------------- | --------------------------- | ---------------------- |
+| Ethereum | `CURVE_SECP256K1` | `ADDRESS_FORMAT_ETHEREUM`   | `m/44'/60'/0'/0/0`    |
+| Solana   | `CURVE_ED25519`   | `ADDRESS_FORMAT_SOLANA`     | `m/44'/501'/0'/0'`    |
+| Bitcoin  | `CURVE_SECP256K1` | `ADDRESS_FORMAT_BITCOIN_MAINNET_P2TR` | `m/86'/0'/0'/0/0` |
+| Cosmos   | `CURVE_SECP256K1` | `ADDRESS_FORMAT_COSMOS`     | `m/44'/118'/0'/0/0`   |
+| Tron     | `CURVE_SECP256K1` | `ADDRESS_FORMAT_TRON`       | `m/44'/195'/0'/0/0`   |
+
+For the full list of supported address formats and curves, see [Wallets](/concepts/wallets).
+
+## Mnemonic length
+
+Wallet seeds are generated with a 12-word mnemonic by default. For additional security, you can specify a longer mnemonic (15, 18, 21, or 24 words) at creation time. The mnemonic length cannot be changed after the wallet is created.
+
+```ts
+const wallet = await client.createWallet({
+  walletName: "high-security-treasury",
+  mnemonicLength: 24,
+  accounts: [
+    {
+      curve: "CURVE_SECP256K1",
+      pathFormat: "PATH_FORMAT_BIP32",
+      path: "m/44'/60'/0'/0/0",
+      addressFormat: "ADDRESS_FORMAT_ETHEREUM",
+    },
+  ],
+});
+```
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Treasury management" icon="building-columns" href="/payment-orchestration/treasury-management">
+    Structure multiple wallets for different purposes — hot wallet, sweep wallet, reserve.
+  </Card>
+  <Card title="Payment policies" icon="shield-check" href="/payment-orchestration/payment-policies">
+    Restrict what your API key can sign before going to production.
+  </Card>
+</CardGroup>

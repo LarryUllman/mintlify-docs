@@ -1,0 +1,77 @@
+---
+title: "Signing payments"
+description: "Sign and broadcast payment transactions from your backend using Turnkey API keys."
+---
+
+With a company wallet funded and [policies in place](/payment-orchestration/payment-policies), your backend can sign payment transactions without any manual approval step.
+
+Construct the unsigned transaction, sign it with Turnkey, and broadcast it via your RPC provider.
+
+## Sign and send a payment
+
+<Tabs>
+<Tab title="TypeScript (ethers)">
+```ts
+import { ethers } from "ethers";
+import { Turnkey } from "@turnkey/sdk-server";
+import { TurnkeySigner } from "@turnkey/ethers";
+
+const turnkey = new Turnkey({
+  apiBaseUrl: "https://api.turnkey.com",
+  apiPrivateKey: process.env.TURNKEY_API_PRIVATE_KEY!,
+  apiPublicKey: process.env.TURNKEY_API_PUBLIC_KEY!,
+  defaultOrganizationId: process.env.TURNKEY_ORG_ID!,
+});
+
+const client = turnkey.apiClient();
+const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
+
+const signer = new TurnkeySigner({
+  client,
+  organizationId: process.env.TURNKEY_ORG_ID!,
+  signWith: "<YOUR_PAYMENT_ADDRESS>",
+});
+
+const connectedSigner = signer.connect(provider);
+
+const tx = await connectedSigner.sendTransaction({
+  to: "<RECIPIENT_ADDRESS>",
+  value: ethers.parseUnits("100", 6), // 100 USDC
+  type: 2,
+});
+
+console.log("Payment sent:", tx.hash);
+```
+</Tab>
+<Tab title="CLI">
+```bash
+turnkey request --path /public/v1/submit/sign_transaction --body '{
+  "timestampMs": "'"$(date +%s)"'000",
+  "type": "ACTIVITY_TYPE_SIGN_TRANSACTION_V2",
+  "organizationId": "'"$ORGANIZATION_ID"'",
+  "parameters": {
+    "type": "TRANSACTION_TYPE_ETHEREUM",
+    "signWith": "<YOUR_PAYMENT_ADDRESS>",
+    "unsignedTransaction": "<HEX_ENCODED_UNSIGNED_TX>"
+  }
+}' --key-name $TK_API_KEY_NAME
+```
+</Tab>
+</Tabs>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Payment policies" icon="shield-check" href="/payment-orchestration/payment-policies">
+    Restrict what can be signed before going to production.
+  </Card>
+  <Card title="Payouts at scale" icon="bolt-lightning" href="/payment-orchestration/payouts-at-scale">
+    Nonce management and high-throughput patterns.
+  </Card>
+  <Card title="Stablecoins and tokens" icon="coin" href="/payment-orchestration/stablecoins-and-tokens">
+    Send USDC, USDT, and other ERC-20 tokens.
+  </Card>
+  <Card title="Monitor and audit" icon="eye" href="/payment-orchestration/monitoring-and-reconciliation">
+    Track payment status and build audit trails.
+  </Card>
+</CardGroup>

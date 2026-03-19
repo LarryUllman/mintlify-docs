@@ -1,0 +1,93 @@
+---
+title: "Monitoring and reconciliation"
+description: "Track payment activity, match on-chain outcomes to internal records, and produce audit exports for finance and compliance."
+sidebarTitle: "Monitor and reconcile"
+---
+
+When running payment workflows in production, visibility into what's being signed, by whom, and when is critical. Turnkey provides built-in tools to observe signing activity and maintain a complete audit trail.
+
+## Activity log
+
+Every action in Turnkey — including wallet creation, transaction signing, and policy changes — is recorded as an **activity**. Each activity includes:
+
+- **Type** — The action performed (e.g., `SIGN_TRANSACTION`, `SIGN_RAW_PAYLOAD`)
+- **Status** — Whether the activity succeeded, failed, or is pending approval
+- **Initiator** — The user or API key that initiated the request
+- **Timestamp** — When the activity was created and completed
+- **Organization** — The organization context for the activity
+
+Query activities programmatically to build dashboards, trigger alerts, or feed into your compliance systems.
+
+<Tabs>
+<Tab title="TypeScript">
+```ts
+const activities = await client.listActivities({
+  organizationId: process.env.TURNKEY_ORGANIZATION_ID,
+  filterByStatus: ["ACTIVITY_STATUS_COMPLETED"],
+  filterByType: ["ACTIVITY_TYPE_SIGN_TRANSACTION"],
+});
+
+for (const activity of activities.activities) {
+  console.log(
+    `[${activity.createdAt.seconds}] ${activity.type} — ${activity.status}`
+  );
+}
+```
+</Tab>
+<Tab title="CLI">
+```bash
+turnkey request list-activities \
+  --filter-type ACTIVITY_TYPE_SIGN_TRANSACTION \
+  --filter-status ACTIVITY_STATUS_COMPLETED
+```
+</Tab>
+</Tabs>
+
+## Policy evaluations
+
+When a signing request is processed, Turnkey's [policy engine](/concepts/policies/overview) evaluates it against your configured policies. You can retrieve the evaluation results to understand exactly why a transaction was approved or denied.
+
+```ts
+const evaluations = await client.getPolicyEvaluations({
+  organizationId: process.env.TURNKEY_ORGANIZATION_ID,
+  activityId: "<activity-id>",
+});
+
+for (const evaluation of evaluations.policyEvaluations) {
+  console.log(`Policy: ${evaluation.policyName} — ${evaluation.effect}`);
+}
+```
+
+This is useful for:
+
+- **Debugging** — Understanding why a transaction was rejected
+- **Compliance** — Proving that the correct approval rules were enforced
+- **Monitoring** — Alerting when transactions are approved by fallback policies
+
+## Building an audit trail
+
+Combine activity logs and policy evaluations to maintain a complete audit trail for every payment:
+
+| Data point            | Source                     |
+| --------------------- | -------------------------- |
+| What was signed       | Activity log (parameters)  |
+| Who initiated it      | Activity log (initiator)   |
+| When it happened      | Activity log (timestamp)   |
+| Which policies applied | Policy evaluations         |
+| Approval workflow     | Activity log (status changes) |
+| On-chain result       | Transaction status         |
+
+<Note>
+All activity data is retained by Turnkey and available via the API. For long-term archival, export activity logs to your own storage on a regular cadence.
+</Note>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Policy engine" icon="shield" href="/concepts/policies/overview">
+    Configure policies to control what gets signed.
+  </Card>
+  <Card title="API reference: List Activities" icon="list" href="/api-reference/queries/list-activities">
+    See the full API for querying activities.
+  </Card>
+</CardGroup>
